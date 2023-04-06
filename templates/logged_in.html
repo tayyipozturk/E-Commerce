@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}You've logged in {% endblock %}
+
+{% if message  %}
+    <div class="alert alert-secondary" role="alert">
+        <p>{{ message }}</p>
+    </div>
+{% endif %}
+
+{% block content %}
+<p style="background-color: cadetblue">Hello! You have logged in as {{ email }}</p>
+
+{% endblock %}
