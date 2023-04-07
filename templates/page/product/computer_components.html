@@ -1,0 +1,52 @@
+{% extends "base/market_base.html" %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Computer Components</h1>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th width="100">Price $</th>
+                            <th>Seller</th>
+                            <th>Spec</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for computer_component in computer_component_list %}
+                            <tr>
+                                <td><img src="{{ computer_component.image }}" alt="Image of {{ computer_component.name }}" width="50" height="50"></td>
+                                <td>{{ computer_component.name }}</td>
+                                <td>{{ computer_component.description }}</td>
+                                <td style="color: #85BB65">{{ computer_component.price }} $</td>
+                                <td>{{ computer_component.seller }}</td>
+                                {% if computer_component.spec != "None" %}
+                                    <td>{{ computer_component.spec }}</td>
+                                {% else %}
+                                    <td>Not specified</td>
+                                {% endif %}
+                                {% if computer_component.rating == "0" %}
+                                    <td>Not rated yet</td>
+                                {% else %}
+                                    <td>{{ computer_component.rating }}</td>
+                                {% endif %}
+                                {% if computer_component.reviews %}
+                                    {% for review in computer_component.reviews %}
+                                        <td>{{ review }}</td>
+                                    {% endfor %}
+                                {% else %}
+                                    <td>Not reviewed yet</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

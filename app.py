@@ -16,7 +16,9 @@ users_collection.create_index([('username', 1)], unique=True)
 
 
 class Item:
-    def __init__(self, name, description, price, seller, image, size=None, colour=None, spec=None):
+    def __init__(self, category, name, description, price, seller, image, size=None, colour=None, spec=None):
+        self._id = None
+        self.category = category
         self.name = name
         self.description = description
         self.price = price
@@ -26,19 +28,31 @@ class Item:
         self.colour = colour
         self.spec = spec
         self.rating = 0
+        self.rate_count = 0
         self.reviews = []
 
+    def insert_review(self, review):
+        self.reviews.append(review)
+        items_collection.update_one({'_id': ObjectId(self._id)}, {'$push': {'reviews': review}})
+        return 'Review inserted'
+
+    def rate(self, rating):
+        self.rate_count += 1
+        self.rating = (self.rating * (self.rate_count - 1) + rating) / self.rate_count
+        items_collection.update_one({'_id': ObjectId(self._id)}, {'$set': {'rating': self.rating}})
+
     def save(self):
-        item_dict = {'name': self.name, 'description': self.description, 'price': self.price, 'seller': self.seller,
+        item_dict = {'category': self.category, 'name': self.name, 'description': self.description, 'price': self.price, 'seller': self.seller,
                      'image': self.image, 'size': self.size, 'colour': self.colour, 'spec': self.spec,
                      'rating': self.rating, 'reviews': self.reviews}
-        item_id = items_collection.insert_one(item_dict).inserted_id
-        return str(item_id)
+        self._id = items_collection.insert_one(item_dict).inserted_id
+        return str(self._id)
 
 
 @app.route('/items', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def add_item():
+    category = request.json.get('category')
     name = request.json.get('name')
     description = request.json.get('description')
     price = request.json.get('price')
@@ -49,7 +63,7 @@ def add_item():
     spec = request.json.get('spec')
     if name is None or price is None or seller is None:
         return jsonify({'error': 'Name, price and seller are required'})
-    item = Item(name, description, price, seller, image, size, colour, spec)
+    item = Item(category, name, description, price, seller, image, size, colour, spec)
     item_id = item.save()
     return jsonify({'success': True, 'item_id': item_id})
 
@@ -68,6 +82,7 @@ def get_item(item_id):
 @app.route('/items/<item_id>', methods=['PUT'])
 @cross_origin(supports_credentials=True)
 def update_item(item_id):
+    category = request.json.get('category')
     name = request.json.get('name')
     description = request.json.get('description')
     price = request.json.get('price')
@@ -78,7 +93,7 @@ def update_item(item_id):
     spec = request.json.get('spec')
     if name is None or price is None or seller is None:
         return jsonify({'error': 'Name, price and seller are required'})
-    items_collection.update_one({'_id': ObjectId(item_id)}, {'$set': {'name': name, 'description': description,
+    items_collection.update_one({'_id': ObjectId(item_id)}, {'$set': {'category': category, 'name': name, 'description': description,
                                                                       'price': price, 'seller': seller, 'image': image,
                                                                       'size': size, 'colour': colour, 'spec': spec}})
     return 'Item updated'
@@ -94,11 +109,20 @@ def delete_item(item_id):
 @app.route('/items')
 @cross_origin(supports_credentials=True)
 def get_items():
-    items = []
-    for item_dict in items_collection.find():
-        item_dict['_id'] = str(item_dict['_id'])
-        items.append(item_dict)
-    return jsonify(items)
+    product_list = []
+    for item in items_collection.find():
+        item['_id'] = str(item['_id'])
+        item['name'] = str(item['name'])
+        item['seller'] = str(item['seller'])
+        item['reviews'] = [str(review) for review in item['reviews']]
+        item['rating'] = str(item['rating'])
+        item['price'] = str(item['price'])
+        item['size'] = str(item['size'])
+        item['colour'] = str(item['colour'])
+        item['spec'] = str(item['spec'])
+        item['image'] = str(item['image'])
+        product_list.append(item)
+    return render_template('page/product/all_products.html', product_list=product_list)
 
 
 class User:
@@ -107,13 +131,21 @@ class User:
         self.email = email
         self.password = password
         self.role = role
+        self.rating = 0
+        self.rate_count = 0
         self.reviews = []
 
-    def get_average_rating(self):
-        if len(self.reviews) == 0:
-            return 0
-        else:
-            return sum(review['rating'] for review in self.reviews) / len(self.reviews)
+    def insert_review_to_item(self, item_id, review):
+        self.reviews.append(review)
+        items_collection.update_one({'_id': ObjectId(item_id)}, {'$push': {'reviews': review}})
+        return 'Review inserted'
+
+    def rate(self, item_id):
+        items_collection.update_one({'_id': ObjectId(item_id)}, {'$inc': {'rate_count': 1}})
+        items_collection.update_one({'_id': ObjectId(item_id)}, {'$set': {'rating': {'$avg': ['$rating', self.rating]}}})
+        self.rate_count += 1
+        self.rating = (self.rating * (self.rate_count - 1) + self.rating) / self.rate_count
+        return 'Rating updated'
 
     def save(self):
         encrypted_password = bcrypt.hashpw(self.password.encode('utf-8'), bcrypt.gensalt())
@@ -189,12 +221,86 @@ def get_users():
     return jsonify(users)
 
 
+@app.route('/clothing', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_clothing():
+    clothing_list = []
+    for item in items_collection.find():
+        if item['category'] == 'Clothing':
+            item['_id'] = str(item['_id'])
+            item['name'] = str(item['name'])
+            item['seller'] = str(item['seller'])
+            item['reviews'] = [str(review) for review in item['reviews']]
+            item['rating'] = str(item['rating'])
+            item['price'] = str(item['price'])
+            item['size'] = str(item['size'])
+            item['colour'] = str(item['colour'])
+            item['spec'] = str(item['spec'])
+            item['image'] = str(item['image'])
+            clothing_list.append(item)
+    return render_template('page/product/clothing.html', clothing_list=clothing_list)
+
+
+@app.route('/computer_components', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_computer_components():
+    computer_component_list = []
+    for item in items_collection.find():
+        if item['category'] == 'Computer Components':
+            item['_id'] = str(item['_id'])
+            item['name'] = str(item['name'])
+            item['seller'] = str(item['seller'])
+            item['reviews'] = [str(review) for review in item['reviews']]
+            item['rating'] = str(item['rating'])
+            item['price'] = str(item['price'])
+            item['spec'] = str(item['spec'])
+            item['image'] = str(item['image'])
+            computer_component_list.append(item)
+    return render_template('page/product/computer_components.html', computer_component_list=computer_component_list)
+
+
+@app.route('/monitors', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_monitors():
+    monitor_list = []
+    for item in items_collection.find():
+        if item['category'] == 'Monitors':
+            item['_id'] = str(item['_id'])
+            item['name'] = str(item['name'])
+            item['seller'] = str(item['seller'])
+            item['reviews'] = [str(review) for review in item['reviews']]
+            item['rating'] = str(item['rating'])
+            item['price'] = str(item['price'])
+            item['spec'] = str(item['spec'])
+            item['image'] = str(item['image'])
+            monitor_list.append(item)
+    return render_template('page/product/monitors.html', monitor_list=monitor_list)
+
+
+@app.route('/snacks', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_snacks():
+    snack_list = []
+    for item in items_collection.find():
+        if item['category'] == 'Snacks':
+            item['_id'] = str(item['_id'])
+            item['name'] = str(item['name'])
+            item['seller'] = str(item['seller'])
+            item['reviews'] = [str(review) for review in item['reviews']]
+            item['rating'] = str(item['rating'])
+            item['price'] = str(item['price'])
+            item['image'] = str(item['image'])
+            snack_list.append(item)
+    return render_template('page/product/snacks.html', snack_list=snack_list)
+
+
 @app.route("/register", methods=['POST', 'GET'])
+@cross_origin(supports_credentials=True)
 def register():
     message = 'You need to login as admin before adding a user.'
     if "email" not in session:
         return redirect(url_for("login"))
-    render_template('register.html', message=message)
+    render_template('page/register.html', message=message)
     if request.method == "POST":
         current_user = users_collection.find_one({"email": session["email"]})
         if current_user['role'] != 'admin':
@@ -209,32 +315,34 @@ def register():
         email_found = users_collection.find_one({"email": email})
         if user_found:
             message = 'There already is a user by that username'
-            return render_template('register.html', message=message)
+            return render_template('page/register.html', message=message)
         if email_found:
             message = 'This email already exists in database'
-            return render_template('register.html', message=message)
+            return render_template('page/register.html', message=message)
         if password1 != password2:
             message = 'Passwords should match!'
-            return render_template('register.html', message=message)
+            return render_template('page/register.html', message=message)
         else:
             hashed = bcrypt.hashpw(password2.encode('utf-8'), bcrypt.gensalt())
             user_input = {'username': username, 'email': email, 'password': hashed, 'role': 'user'}
             users_collection.insert_one(user_input)
             return redirect(url_for('registered'))
     else:
-        return render_template('register.html', message=message)
+        return render_template('page/register.html', message=message)
 
 
 @app.route("/registe    red")
+@cross_origin(supports_credentials=True)
 def registered():
     if "email" in session:
         session.pop("email")
-        return render_template('registered.html')
+        return render_template('page/registered.html')
     else:
         return redirect(url_for("login"))
 
 
 @app.route("/", methods=["POST", "GET"])
+@cross_origin(supports_credentials=True)
 def login():
     message = 'Please login to your account'
     if "email" in session:
@@ -256,27 +364,29 @@ def login():
                 if "email" in session:
                     return redirect(url_for("logged_in"))
                 message = 'Wrong password'
-                return render_template('login.html', message=message)
+                return render_template('page/login.html', message=message)
         else:
             message = 'Email not found'
-            return render_template('login.html', message=message)
-    return render_template('login.html', message=message)
+            return render_template('page/login.html', message=message)
+    return render_template('page/login.html', message=message)
 
 
 @app.route('/logged_in')
+@cross_origin(supports_credentials=True)
 def logged_in():
     if "email" in session:
         email = session['email']
-        return render_template('logged_in.html', email=email)
+        return render_template('page/logged_in.html', email=email)
     else:
         return redirect(url_for("login"))
 
 
 @app.route("/logout", methods=["POST", "GET"])
+@cross_origin(supports_credentials=True)
 def logout():
     if "email" in session:
         session.pop("email", None)
-        return render_template("logout.html")
+        return render_template("page/logout.html")
     else:
         return redirect(url_for("login"))
 

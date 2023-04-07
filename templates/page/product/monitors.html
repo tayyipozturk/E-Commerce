@@ -1,0 +1,52 @@
+{% extends "base/market_base.html" %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Monitors</h1>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Price $</th>
+                            <th>Seller</th>
+                            <th>Spec</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for monitor in monitor_list %}
+                            <tr>
+                                <td><img src="{{ monitor.image }}" alt="Image of {{ monitor.name }}" width="50" height="50"></td>
+                                <td>{{ monitor.name }}</td>
+                                <td>{{ monitor.description }}</td>
+                                <td style="color: #85BB65">{{ monitor.price }} $</td>
+                                <td>{{ monitor.seller }}</td>
+                                {% if monitor.spec != "None" %}
+                                    <td>{{ monitor.spec }}</td>
+                                {% else %}
+                                    <td>Not specified</td>
+                                {% endif %}
+                                {% if monitor.rating == "0" %}
+                                    <td>Not rated yet</td>
+                                {% else %}
+                                    <td>{{ monitor.rating }}</td>
+                                {% endif %}
+                                {% if monitor.reviews %}
+                                    {% for review in monitor.reviews %}
+                                        <td>{{ review }}</td>
+                                    {% endfor %}
+                                {% else %}
+                                    <td>Not reviewed yet</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
