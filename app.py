@@ -125,7 +125,7 @@ def get_items():
     return render_template('page/product/all_products.html', product_list=product_list)
 
 
-@app.route('/products', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def products():
     # get form inputs to check if categories are selected
@@ -164,7 +164,11 @@ def products():
                 item['image'] = str(item['image'])
                 product_list.append(item)
 
-    return render_template('page/product/all_products.html', product_list=product_list)
+    # if in session
+    if 'email' in session:
+        return render_template('page/product/all_products.html', product_list=product_list)
+    else:
+        return render_template('page/index.html', product_list=product_list)
 
 
 class User:
@@ -383,7 +387,7 @@ def registered():
         return redirect(url_for("login"))
 
 
-@app.route("/", methods=["POST", "GET"])
+@app.route("/login", methods=["POST", "GET"])
 @cross_origin(supports_credentials=True)
 def login():
     message = 'Please login to your account'
