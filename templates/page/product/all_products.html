@@ -1,0 +1,64 @@
+{% extends "base/market_base.html" %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>All Products For Sale!</h1>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th width="100">Price $</th>
+                            <th>Seller</th>
+                            <th>Size</th>
+                            <th>Colour</th>
+                            <th>Spec</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_list %}
+                            <tr>
+                                <td><img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50"></td>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.description }}</td>
+                                <td style="color: #85BB65">{{ product.price }} $</td>
+                                <td>{{ product.seller }}</td>
+                                {% if product.size != "None" %}
+                                    <td>{{ product.size }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.colour != "None" %}
+                                    <td>{{ product.colour }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.spec != "None" %}
+                                    <td>{{ product.spec }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.rating == "0" %}
+                                    <td>Not rated yet</td>
+                                {% else %}
+                                    <td>{{ product.rating }}</td>
+                                {% endif %}
+                                {% if product.reviews %}
+                                    {% for review in product.reviews %}
+                                        <td>{{ review }}</td>
+                                    {% endfor %}
+                                {% else %}
+                                    <td>Not reviewed yet</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

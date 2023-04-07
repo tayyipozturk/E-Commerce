@@ -1,0 +1,54 @@
+{% extends "base/market_base.html" %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Clothing</h1>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th width="100">Price $</th>
+                            <th>Seller</th>
+                            <th>Size</th>
+                            <th>Colour</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for clothing in clothing_list %}
+                            <tr>
+                                <td><img src="{{ clothing.image }}" alt="Image of {{ clothing.name }}" width="50" height="50"></td>
+                                <td>{{ clothing.name }}</td>
+                                <td>{{ clothing.description }}</td>
+                                <td  style="color: #85BB65">{{ clothing.price }} $</td>
+                                <td>{{ clothing.seller }}</td>
+                                <td>{{ clothing.size }}</td>
+                               {% if clothing.colour != "None" %}
+                                    <td>{{ clothing.colour }}</td>
+                                {% else %}
+                                    <td>Not specified</td>
+                                {% endif %}
+                                {% if clothing.rating == "0" %}
+                                    <td>Not rated yet</td>
+                                {% else %}
+                                    <td>{{ clothing.rating }}</td>
+                                {% endif %}
+                                {% if clothing.reviews %}
+                                    {% for review in clothing.reviews %}
+                                        <td>{{ review }}</td>
+                                    {% endfor %}
+                                {% else %}
+                                    <td>Not reviewed yet</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
