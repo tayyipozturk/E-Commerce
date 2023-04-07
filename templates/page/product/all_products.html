@@ -1,9 +1,36 @@
 {% extends "base/market_base.html" %}
+
+{% block title %}Products{% endblock %}
 {% block content %}
-    <div class="container">
+    <script>
+        function change(id) {
+            var change = document.getElementById(id);
+            if (change.value === "False" ) {
+                change.value = "True";
+            } else {
+                if (change.value === "None") {
+                    change.value = "True";
+                } else{
+                    change.value = "False";
+                }
+            }
+        }
+    </script>
+<div class="container">
+    <div class="container" style="justify-content: left">
+        <form action="{{ url_for('products')}}" method="post">
+            <input type="checkbox" id="sc" name="showClothing" value="False" onclick="change('sc')" > Clothing<br>
+            <input type="checkbox" id="scc" name="showComputerComponents" value="False" onclick="change('scc')" > Computer Components<br>
+            <input type="checkbox" id="sm" name="showMonitors" value="False" onclick="change('sm')" > Monitors<br>
+            <input type="checkbox" id="ss" name="showSnacks" value="False" onclick="change('ss')"> Snacks<br>
+            <input type="submit" value="Filter">
+        </form>
+    </div>
+
+    <div class="container" style="display: inline-block">
         <div class="row">
             <div class="col-md-12">
-                <h1>All Products For Sale!</h1>
+                <h1>Products</h1>
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -61,4 +88,6 @@
             </div>
         </div>
     </div>
+</div>
+
 {% endblock %}

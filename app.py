@@ -106,7 +106,7 @@ def delete_item(item_id):
     return 'Item deleted'
 
 
-@app.route('/items')
+@app.route('/items', methods=['GET'])
 @cross_origin(supports_credentials=True)
 def get_items():
     product_list = []
@@ -122,6 +122,48 @@ def get_items():
         item['spec'] = str(item['spec'])
         item['image'] = str(item['image'])
         product_list.append(item)
+    return render_template('page/product/all_products.html', product_list=product_list)
+
+
+@app.route('/products', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def products():
+    # get form inputs to check if categories are selected
+    show = {'Clothing': request.form.get('showClothing'),
+            'Computer Components': request.form.get('showComputerComponents'),
+            'Monitors': request.form.get('showMonitors'), 'Snacks': request.form.get('showSnacks')}
+
+    print(show)
+    # get all items from database
+    product_list = []
+    if show['Clothing'] != 'True' and show['Computer Components'] != 'True' and show['Monitors'] != 'True' and show['Snacks'] != 'True':
+        for item in items_collection.find():
+            item['_id'] = str(item['_id'])
+            item['name'] = str(item['name'])
+            item['seller'] = str(item['seller'])
+            item['reviews'] = [str(review) for review in item['reviews']]
+            item['rating'] = str(item['rating'])
+            item['price'] = str(item['price'])
+            item['size'] = str(item['size'])
+            item['colour'] = str(item['colour'])
+            item['spec'] = str(item['spec'])
+            item['image'] = str(item['image'])
+            product_list.append(item)
+    else:
+        for item in items_collection.find():
+            if show[item['category']] == 'True':
+                item['_id'] = str(item['_id'])
+                item['name'] = str(item['name'])
+                item['seller'] = str(item['seller'])
+                item['reviews'] = [str(review) for review in item['reviews']]
+                item['rating'] = str(item['rating'])
+                item['price'] = str(item['price'])
+                item['size'] = str(item['size'])
+                item['colour'] = str(item['colour'])
+                item['spec'] = str(item['spec'])
+                item['image'] = str(item['image'])
+                product_list.append(item)
+
     return render_template('page/product/all_products.html', product_list=product_list)
 
 
