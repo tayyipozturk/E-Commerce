@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base/market_base.html" %}
 {% block title %}You've logged in {% endblock %}
 
 {% if message  %}
@@ -8,6 +8,6 @@
 {% endif %}
 
 {% block content %}
-<p>User has been registered successfully.</p>
+<p style="background-color: cadetblue">Hello! You have logged in as {{ email }}</p>
 
 {% endblock %}
