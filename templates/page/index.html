@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+
+{% block title %}Products{% endblock %}
+{% block content %}
+    <script>
+        function change(id) {
+            var change = document.getElementById(id);
+            if (change.value === "False" ) {
+                change.value = "True";
+            } else {
+                if (change.value === "None") {
+                    change.value = "True";
+                } else{
+                    change.value = "False";
+                }
+            }
+        }
+    </script>
+<div class="container">
+    <div class="container" style="justify-content: left">
+        <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Filter
+        </button>
+        <div class="dropdown-menu dropdown-menu-left" aria-labelledby="dropdownMenuButton">
+                <form action="{{ url_for('products')}}" method="post">
+                    <input type="checkbox" id="sc" name="showClothing" value="False" onclick="change('sc')" > Clothing<br>
+                    <input type="checkbox" id="scc" name="showComputerComponents" value="False" onclick="change('scc')" > Computer Components<br>
+                    <input type="checkbox" id="sm" name="showMonitors" value="False" onclick="change('sm')" > Monitors<br>
+                    <input type="checkbox" id="ss" name="showSnacks" value="False" onclick="change('ss')"> Snacks<br>
+                    <input type="submit" value="Filter">
+                </form>
+        </div>
+
+    <div class="container" style="display: inline-block">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Products</h1>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th width="100">Price $</th>
+                            <th>Seller</th>
+                            <th>Size</th>
+                            <th>Colour</th>
+                            <th>Spec</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_list %}
+                            <tr>
+                                <td><img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50"></td>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.description }}</td>
+                                <td style="color: #85BB65">{{ product.price }} $</td>
+                                <td>{{ product.seller }}</td>
+                                {% if product.size != "None" %}
+                                    <td>{{ product.size }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.colour != "None" %}
+                                    <td>{{ product.colour }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.spec != "None" %}
+                                    <td>{{ product.spec }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.rating == "0" %}
+                                    <td>Not rated yet</td>
+                                {% else %}
+                                    <td>{{ product.rating }}</td>
+                                {% endif %}
+                                {% if product.reviews %}
+                                    {% for review in product.reviews %}
+                                        <td>{{ review }}</td>
+                                    {% endfor %}
+                                {% else %}
+                                    <td>Not reviewed yet</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
