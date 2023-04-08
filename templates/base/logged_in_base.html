@@ -20,9 +20,13 @@
         <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
-            <a class="dropdown-item" href="/all_users">All Users</a>
+            {% if role == "admin" %}
+                <a class="dropdown-item" href="/all_users">All Users</a>
+            {% endif %}
             <a class="dropdown-item" href="/profile">Profile</a>
-            <a class="dropdown-item" href="/register">Register</a>
+            {% if role == "admin" %}
+                <a class="dropdown-item" href="/register">Register</a>
+            {% endif %}
             <a class="dropdown-item" href="/logout">Logout</a>
         </div>
     </div>

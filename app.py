@@ -12,6 +12,7 @@ client = MongoClient("mongodb+srv://tayyipozturk:ceng495hw1@cluster0.egn5zal.mon
 db = client['commerce']
 items_collection = db['items']
 users_collection = db['users']
+cart_collection = db['cart']
 users_collection.create_index([('username', 1)], unique=True)
 
 
@@ -170,9 +171,9 @@ def products(message=None):
                 item['seller_id'] = str(item['seller_id'])
                 product_list.append(item)
 
-    # if in session
+    current_user = users_collection.find_one({'username': session['username']})
     if 'email' in session:
-        return render_template('page/product/all_products.html', product_list=product_list, message=message)
+        return render_template('page/product/all_products.html', product_list=product_list, message=message, role=current_user['role'])
     else:
         return render_template('page/index.html', product_list=product_list)
 
@@ -364,7 +365,8 @@ def get_product(item_id):
     item['image'] = str(item['image'])
     item['category'] = str(item['category'])
     item['description'] = str(item['description'])
-    return render_template('page/product/product.html', item=item, seller_id=seller_id)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/product.html', item=item, seller_id=seller_id, role=current_user['role'])
 
 
 @app.route('/all_users', methods=['GET'])
@@ -378,7 +380,8 @@ def get_all_users():
         user['password'] = str(user['password'])
         user['role'] = str(user['role'])
         user_list.append(user)
-    return render_template('page/admin/all_users.html', user_list=user_list)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/admin/all_users.html', user_list=user_list, role=current_user['role'])
 
 
 @app.route('/user_delete/<user_id>', methods=['GET', 'POST'])
@@ -391,7 +394,8 @@ def user_delete(user_id):
 @app.route('/user_add_form', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def user_add_form():
-    return render_template('page/admin/user_add_form.html')
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/admin/user_add_form.html', role=current_user['role'])
 
 
 @app.route('/user_add', methods=['GET', 'POST'])
@@ -425,7 +429,8 @@ def user_update_form(user_id):
     user['username'] = str(user['username'])
     user['email'] = str(user['email'])
     user['role'] = str(user['role'])
-    return render_template('page/admin/user_update_form.html', user=user)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/admin/user_update_form.html', user=user, role=current_user['role'])
 
 
 @app.route('/user_update/<user_id>', methods=['GET', 'POST'])
@@ -445,19 +450,19 @@ def get_seller(user_id):
     user['username'] = str(user['username'])
     user['email'] = str(user['email'])
     user['role'] = str(user['role'])
-    return render_template('page/user/seller_profile.html', seller=user)
-
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/user/seller_profile.html', seller=user, role=current_user['role'])
 
 
 @app.route("/register", methods=['POST', 'GET'])
 @cross_origin(supports_credentials=True)
 def register():
     message = 'You need to login as admin before adding a user.'
-    if "email" not in session:
+    if "username" not in session:
         return redirect(url_for("login"))
-    render_template('page/register.html', message=message)
+    current_user = users_collection.find_one({"username": session["username"]})
+    render_template('page/register.html', message=message, role=current_user['role'])
     if request.method == "POST":
-        current_user = users_collection.find_one({"email": session["email"]})
         if current_user['role'] != 'admin':
             message = 'You need to login as admin before adding a user.'
             return redirect(url_for("products", message=message))
@@ -472,15 +477,15 @@ def register():
         if user_found:
             message = 'There already is a user by that username'
             flash(message)
-            return render_template('page/register.html', message=message)
+            return render_template('page/register.html', message=message, role=current_user['role'])
         if email_found:
             message = 'This email already exists in database'
             flash(message)
-            return render_template('page/register.html', message=message)
+            return render_template('page/register.html', message=message, role=current_user['role'])
         if password1 != password2:
             message = 'Passwords should match!'
             flash(message)
-            return render_template('page/register.html', message=message)
+            return render_template('page/register.html', message=message, role=current_user['role'])
         else:
             hashed = bcrypt.hashpw(password2.encode('utf-8'), bcrypt.gensalt())
             user_input = {'username': username, 'email': email, 'password': hashed, 'role': 'user'}
@@ -488,14 +493,14 @@ def register():
             flash("User has been registered successfully")
             return redirect(url_for('registered'))
     else:
-        return render_template('page/register.html', message=message)
+        return render_template('page/register.html', message=message, role=current_user['role'])
 
 
 @app.route("/registered")
 @cross_origin(supports_credentials=True)
 def registered():
-    if "email" in session:
-        session.pop("email")
+    if "username" in session:
+        session.pop("username")
         flash("You have been logged out")
         return render_template('page/registered.html')
     else:
@@ -506,30 +511,31 @@ def registered():
 @cross_origin(supports_credentials=True)
 def login():
     message = 'Please login to your account'
-    if "email" in session:
+    if "username" in session:
         return redirect(url_for("products"))
 
     if request.method == "POST":
-        email = request.form.get("email")
+        username = request.form.get("username")
         password = request.form.get("password")
 
-        email_found = users_collection.find_one({"email": email})
-        if email_found:
-            email_val = email_found['email']
-            passwordcheck = email_found['password']
+        username_found = users_collection.find_one({"username": username})
+        if username_found:
+            username_val = username_found['username']
+            passwordcheck = username_found['password']
 
             if bcrypt.checkpw(password.encode('utf-8'), passwordcheck):
-                session["email"] = email_val
+                session["username"] = username_val
+                session['role'] = users_collection.find_one({"username": username})['role']
                 return redirect(url_for('products'))
             else:
-                if "email" in session:
+                if "username" in session:
                     message = 'You are already logged in'
                     return redirect(url_for("products", message=message))
                 message = 'Wrong password'
                 flash(message)
                 return render_template('page/product/all_products.html', message=message)
         else:
-            message = 'Email not found'
+            message = 'Username not found'
             flash(message)
             return render_template('page/login.html', message=message)
     return render_template('page/login.html', message=message)
@@ -538,9 +544,10 @@ def login():
 @app.route('/logged_in')
 @cross_origin(supports_credentials=True)
 def logged_in():
-    if "email" in session:
-        email = session['email']
-        return render_template('page/logged_in.html', email=email)
+    if "username" in session:
+        username = session['username']
+        current_user = users_collection.find_one({'username': session['username']})
+        return render_template('page/logged_in.html', username=username, role=current_user['role'])
     else:
         return redirect(url_for("login"))
 
@@ -548,8 +555,8 @@ def logged_in():
 @app.route("/logout", methods=["POST", "GET"])
 @cross_origin(supports_credentials=True)
 def logout():
-    if "email" in session:
-        session.pop("email", None)
+    if "username" in session:
+        session.pop("username", None)
         flash("You have been logged out")
         return render_template("page/logout.html")
     else:
