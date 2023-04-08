@@ -1,4 +1,5 @@
 Flask==1.1.4
 Flask_Cors==3.0.10
 pymongo==4.3.3
+bcrypt==3.2.0
 markupsafe==2.0.1
