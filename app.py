@@ -123,7 +123,7 @@ def get_items():
         item['spec'] = str(item['spec'])
         item['image'] = str(item['image'])
         product_list.append(item)
-    return render_template('page/product/all_products.html', product_list=product_list)
+    return render_template('page/product/products.html', product_list=product_list)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -171,9 +171,9 @@ def products(message=None):
                 item['seller_id'] = str(item['seller_id'])
                 product_list.append(item)
 
-    current_user = users_collection.find_one({'username': session['username']})
-    if 'email' in session:
-        return render_template('page/product/all_products.html', product_list=product_list, message=message, role=current_user['role'])
+    if 'username' in session:
+        current_user = users_collection.find_one({'username': session['username']})
+        return render_template('page/product/products.html', product_list=product_list, message=message, role=current_user['role'])
     else:
         return render_template('page/index.html', product_list=product_list)
 
@@ -232,18 +232,6 @@ def add_user():
     return jsonify({'success': True, 'user_id': user_id})
 
 
-@app.route('/users/<user_id>')
-@cross_origin(supports_credentials=True)
-def get_user(user_id):
-    user_dict = users_collection.find_one({'_id': ObjectId(user_id)})
-    if user_dict is None:
-        return jsonify({'error': 'User not found'})
-    else:
-        user_dict['_id'] = str(user_dict['_id'])
-        user_dict['reviews'] = User(user_dict['username']).reviews
-        return jsonify(user_dict)
-
-
 @app.route('/users/<user_id>', methods=['PUT'])
 @cross_origin(supports_credentials=True)
 def update_user(user_id):
@@ -252,26 +240,6 @@ def update_user(user_id):
         return jsonify({'error': 'Username is missing'})
     users_collection.update_one({'_id': ObjectId(user_id)}, {'$set': {'username': username}})
     return 'User updated'
-
-
-@app.route('/users/<user_id>', methods=['DELETE'])
-@cross_origin(supports_credentials=True)
-def delete_user(user_id):
-    users_collection.delete_one({'_id': ObjectId(user_id)})
-    return 'User deleted'
-
-
-@app.route('/users')
-@cross_origin(supports_credentials=True)
-def get_users():
-    users = []
-    for user_dict in users_collection.find():
-        user_dict['_id'] = str(user_dict['_id'])
-        user_dict['email'] = str(user_dict['email'])
-        user_dict['password'] = str(user_dict['password'])
-        user_dict['role'] = str(user_dict['role'])
-        users.append(user_dict)
-    return jsonify(users)
 
 
 @app.route('/clothing', methods=['GET'])
@@ -291,7 +259,8 @@ def get_clothing():
             item['spec'] = str(item['spec'])
             item['image'] = str(item['image'])
             clothing_list.append(item)
-    return render_template('page/product/clothing.html', clothing_list=clothing_list)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/clothing.html', clothing_list=clothing_list, role=current_user['role'])
 
 
 @app.route('/computer_components', methods=['GET'])
@@ -309,7 +278,8 @@ def get_computer_components():
             item['spec'] = str(item['spec'])
             item['image'] = str(item['image'])
             computer_component_list.append(item)
-    return render_template('page/product/computer_components.html', computer_component_list=computer_component_list)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/computer_components.html', computer_component_list=computer_component_list, role=current_user['role'])
 
 
 @app.route('/monitors', methods=['GET'])
@@ -327,7 +297,8 @@ def get_monitors():
             item['spec'] = str(item['spec'])
             item['image'] = str(item['image'])
             monitor_list.append(item)
-    return render_template('page/product/monitors.html', monitor_list=monitor_list)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/monitors.html', monitor_list=monitor_list, role=current_user['role'])
 
 
 @app.route('/snacks', methods=['GET'])
@@ -344,7 +315,8 @@ def get_snacks():
             item['price'] = str(item['price'])
             item['image'] = str(item['image'])
             snack_list.append(item)
-    return render_template('page/product/snacks.html', snack_list=snack_list)
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/snacks.html', snack_list=snack_list, role=current_user['role'])
 
 
 @app.route('/items/item/<item_id>', methods=['GET'])
@@ -369,9 +341,9 @@ def get_product(item_id):
     return render_template('page/product/product.html', item=item, seller_id=seller_id, role=current_user['role'])
 
 
-@app.route('/all_users', methods=['GET'])
+@app.route('/users', methods=['GET'])
 @cross_origin(supports_credentials=True)
-def get_all_users():
+def get_users():
     user_list = []
     for user in users_collection.find():
         user['_id'] = str(user['_id'])
@@ -388,10 +360,10 @@ def get_all_users():
 @cross_origin(supports_credentials=True)
 def user_delete(user_id):
     users_collection.delete_one({'_id': ObjectId(user_id)})
-    return redirect(url_for('get_all_users'))
+    return redirect(url_for('get_users'))
 
 
-@app.route('/user_add_form', methods=['GET', 'POST'])
+@app.route('/user/add/form', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def user_add_form():
     current_user = users_collection.find_one({'username': session['username']})
@@ -418,7 +390,7 @@ def user_add():
             'role': role
         }
         users_collection.insert_one(user)
-        return redirect(url_for('get_all_users'))
+        return redirect(url_for('get_users'))
 
 
 @app.route('/user_update_form/<user_id>', methods=['GET', 'POST'])
@@ -439,12 +411,23 @@ def user_update(user_id):
     if request.method == 'POST':
         role = request.form.get('role')
         users_collection.update_one({'_id': ObjectId(user_id)}, {'$set': {'role': role}})
-        return redirect(url_for('get_all_users'))
+        return redirect(url_for('get_users'))
 
 
-@app.route('/all_users/<user_id>', methods=['GET', 'POST'])
+@app.route('/profile', methods=['GET'])
 @cross_origin(supports_credentials=True)
-def get_seller(user_id):
+def profile():
+    current_user = users_collection.find_one({'username': session['username']})
+    current_user['_id'] = str(current_user['_id'])
+    current_user['username'] = str(current_user['username'])
+    current_user['email'] = str(current_user['email'])
+    current_user['role'] = str(current_user['role'])
+    return render_template('page/user/profile.html', user=current_user, role=current_user['role'])
+
+
+@app.route('/users/<user_id>', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def get_user(user_id):
     user = users_collection.find_one({'_id': ObjectId(user_id)})
     user['_id'] = str(user['_id'])
     user['username'] = str(user['username'])
@@ -457,11 +440,10 @@ def get_seller(user_id):
 @app.route("/register", methods=['POST', 'GET'])
 @cross_origin(supports_credentials=True)
 def register():
-    message = 'You need to login as admin before adding a user.'
     if "username" not in session:
         return redirect(url_for("login"))
     current_user = users_collection.find_one({"username": session["username"]})
-    render_template('page/register.html', message=message, role=current_user['role'])
+    render_template('page/register.html', role=current_user['role'])
     if request.method == "POST":
         if current_user['role'] != 'admin':
             message = 'You need to login as admin before adding a user.'
@@ -493,7 +475,7 @@ def register():
             flash("User has been registered successfully")
             return redirect(url_for('registered'))
     else:
-        return render_template('page/register.html', message=message, role=current_user['role'])
+        return render_template('page/register.html', role=current_user['role'])
 
 
 @app.route("/registered")
@@ -510,7 +492,6 @@ def registered():
 @app.route("/login", methods=["POST", "GET"])
 @cross_origin(supports_credentials=True)
 def login():
-    message = 'Please login to your account'
     if "username" in session:
         return redirect(url_for("products"))
 
@@ -533,12 +514,12 @@ def login():
                     return redirect(url_for("products", message=message))
                 message = 'Wrong password'
                 flash(message)
-                return render_template('page/product/all_products.html', message=message)
+                return render_template('page/product/products.html', message=message)
         else:
             message = 'Username not found'
             flash(message)
             return render_template('page/login.html', message=message)
-    return render_template('page/login.html', message=message)
+    return render_template('page/login.html')
 
 
 @app.route('/logged_in')
@@ -556,7 +537,7 @@ def logged_in():
 @cross_origin(supports_credentials=True)
 def logout():
     if "username" in session:
-        session.pop("username", None)
+        session.pop("username")
         flash("You have been logged out")
         return render_template("page/logout.html")
     else:

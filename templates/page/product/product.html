@@ -15,7 +15,7 @@
                 <h3>{{ item.name }}</h3>
                 <p>Description: {{ item.description }}</p>
                 <p>Price: <a style="color: #85BB65">{{ item.price }} $</a></p>
-                <p>Seller: <a href="{{ url_for("get_seller", user_id=seller_id) }}">{{ item.seller }}</a></p>
+                <p>Seller: <a href="{{ url_for("get_user", user_id=seller_id) }}">{{ item.seller }}</a></p>
                 {% if item.size != "None" %}
                     <p>Size: {{ item.size }}</p>
                 {% endif %}

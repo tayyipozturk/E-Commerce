@@ -1,0 +1,17 @@
+{% extends "base/logged_in_base.html" %}
+
+{% block title %}Seller{% endblock %}
+{% block content %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-auto">
+                <h1>Seller Profile</h1>
+                <p>Username: {{ seller.username }}</p>
+                <p>Email: {{ seller.email }}</p>
+                Buraya SELLERIN PRODUCTLARINI EKLE
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

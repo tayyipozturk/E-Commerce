@@ -1,9 +1,9 @@
 {% extends "base/logged_in_base.html" %}
 
-{% block title %}Users{% endblock %}
+{% block title %}Add User{% endblock %}
 {% block content %}
 
-    <!--create user form to add user by adding inputs-->
+    <h1>Add User</h1>
 
     <form style="width: 50%; margin: 0 auto" action="{{ url_for('user_add') }}" method="post">
         <div class="form-group">
