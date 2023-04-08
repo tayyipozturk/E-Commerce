@@ -1,0 +1,34 @@
+{% extends "base/logged_in_base.html" %}
+
+{% block title %}Product{% endblock %}
+{% block content %}
+
+    <!--show one item that has been clicked to its name at all_items page-->
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <img src="{{ item.image }}" alt="item image" class="img-fluid">
+            </div>
+            <div class="col-md-6">
+                <!--give space-->
+                <br>
+                <h3>{{ item.name }}</h3>
+                <p>Description: {{ item.description }}</p>
+                <p>Price: <a style="color: #85BB65">{{ item.price }} $</a></p>
+                <p>Seller: <a href="{{ url_for("get_seller", user_id=seller_id) }}">{{ item.seller }}</a></p>
+                {% if item.size != "None" %}
+                    <p>Size: {{ item.size }}</p>
+                {% endif %}
+                {% if item.colour != "None" %}
+                    <p>Colour: {{ item.colour }}</p>
+                {% endif %}
+                {% if item.spec != "None" %}
+                    <p>Spec: {{ item.spec }}</p>
+                {% endif %}
+                <p>Rating: {{ item.rating }}</p>
+                <p>Reviews: {{ item.reviews }}</p>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

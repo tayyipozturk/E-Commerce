@@ -2,6 +2,13 @@
 
 {% block title %}Products{% endblock %}
 {% block content %}
+
+    {% if message  %}
+    <div class="alert alert-secondary" role="alert">
+        <p>{{ message }}</p>
+    </div>
+    {% endif %}
+
     <script>
         function change(id) {
             var change = document.getElementById(id);
@@ -18,14 +25,19 @@
     </script>
 <div class="container">
     <div class="container" style="justify-content: left">
-        <form action="{{ url_for('products')}}" method="post">
-            <input type="checkbox" id="sc" name="showClothing" value="False" onclick="change('sc')" > Clothing<br>
-            <input type="checkbox" id="scc" name="showComputerComponents" value="False" onclick="change('scc')" > Computer Components<br>
-            <input type="checkbox" id="sm" name="showMonitors" value="False" onclick="change('sm')" > Monitors<br>
-            <input type="checkbox" id="ss" name="showSnacks" value="False" onclick="change('ss')"> Snacks<br>
-            <input type="submit" value="Filter">
-        </form>
-    </div>
+        <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Filter
+        </button>
+        <div class="dropdown-menu dropdown-menu-left" aria-labelledby="dropdownMenuButton">
+                <form action="{{ url_for('products')}}" method="post">
+                    <input type="checkbox" id="sc" name="showClothing" value="False" onclick="change('sc')" > Clothing<br>
+                    <input type="checkbox" id="scc" name="showComputerComponents" value="False" onclick="change('scc')" > Computer Components<br>
+                    <input type="checkbox" id="sm" name="showMonitors" value="False" onclick="change('sm')" > Monitors<br>
+                    <input type="checkbox" id="ss" name="showSnacks" value="False" onclick="change('ss')"> Snacks<br>
+                    <input type="submit" value="Filter">
+                </form>
+        </div>
 
     <div class="container" style="display: inline-block">
         <div class="row">
@@ -44,16 +56,17 @@
                             <th>Spec</th>
                             <th>Rating</th>
                             <th>Reviews</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for product in product_list %}
                             <tr>
                                 <td><img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50"></td>
-                                <td>{{ product.name }}</td>
+                                <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-primary">{{ product.name }}</a></td>
                                 <td>{{ product.description }}</td>
                                 <td style="color: #85BB65">{{ product.price }} $</td>
-                                <td>{{ product.seller }}</td>
+                                <td><a href="{{ url_for("get_seller", user_id=product.seller_id) }}">{{ product.seller }}</a></td>
                                 {% if product.size != "None" %}
                                     <td>{{ product.size }}</td>
                                 {% else %}

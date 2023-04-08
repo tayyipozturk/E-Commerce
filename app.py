@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, url_for, redirect, session
+from flask import Flask, request, jsonify, render_template, url_for, redirect, session, flash
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask_cors import CORS, cross_origin
@@ -127,7 +127,7 @@ def get_items():
 
 @app.route('/', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
-def products():
+def products(message=None):
     # get form inputs to check if categories are selected
     show = {'Clothing': request.form.get('showClothing'),
             'Computer Components': request.form.get('showComputerComponents'),
@@ -148,6 +148,9 @@ def products():
             item['colour'] = str(item['colour'])
             item['spec'] = str(item['spec'])
             item['image'] = str(item['image'])
+            seller_id = users_collection.find_one({'username': item['seller']})
+            item.update({'seller_id': str(seller_id['_id'])})
+            item['seller_id'] = str(item['seller_id'])
             product_list.append(item)
     else:
         for item in items_collection.find():
@@ -162,11 +165,14 @@ def products():
                 item['colour'] = str(item['colour'])
                 item['spec'] = str(item['spec'])
                 item['image'] = str(item['image'])
+                seller_id = users_collection.find_one({'username': item['seller']})
+                item.update({'seller_id': str(seller_id['_id'])})
+                item['seller_id'] = str(item['seller_id'])
                 product_list.append(item)
 
     # if in session
     if 'email' in session:
-        return render_template('page/product/all_products.html', product_list=product_list)
+        return render_template('page/product/all_products.html', product_list=product_list, message=message)
     else:
         return render_template('page/index.html', product_list=product_list)
 
@@ -340,6 +346,109 @@ def get_snacks():
     return render_template('page/product/snacks.html', snack_list=snack_list)
 
 
+@app.route('/items/item/<item_id>', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_product(item_id):
+    item = items_collection.find_one({'_id': ObjectId(item_id)})
+    item['_id'] = str(item['_id'])
+    item['name'] = str(item['name'])
+    item['seller'] = str(item['seller'])
+    seller = users_collection.find_one({'username': item['seller']})
+    seller_id = str(seller['_id'])
+    item['reviews'] = [str(review) for review in item['reviews']]
+    item['rating'] = str(item['rating'])
+    item['price'] = str(item['price'])
+    item['size'] = str(item['size'])
+    item['colour'] = str(item['colour'])
+    item['spec'] = str(item['spec'])
+    item['image'] = str(item['image'])
+    item['category'] = str(item['category'])
+    item['description'] = str(item['description'])
+    return render_template('page/product/product.html', item=item, seller_id=seller_id)
+
+
+@app.route('/all_users', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_all_users():
+    user_list = []
+    for user in users_collection.find():
+        user['_id'] = str(user['_id'])
+        user['username'] = str(user['username'])
+        user['email'] = str(user['email'])
+        user['password'] = str(user['password'])
+        user['role'] = str(user['role'])
+        user_list.append(user)
+    return render_template('page/admin/all_users.html', user_list=user_list)
+
+
+@app.route('/user_delete/<user_id>', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def user_delete(user_id):
+    users_collection.delete_one({'_id': ObjectId(user_id)})
+    return redirect(url_for('get_all_users'))
+
+
+@app.route('/user_add_form', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def user_add_form():
+    return render_template('page/admin/user_add_form.html')
+
+
+@app.route('/user_add', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def user_add():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        if password != confirm_password:
+            flash('Passwords do not match')
+            return redirect(url_for('user_add_form'))
+        password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        role = request.form.get('role')
+        user = {
+            'username': username,
+            'email': email,
+            'password': password,
+            'role': role
+        }
+        users_collection.insert_one(user)
+        return redirect(url_for('get_all_users'))
+
+
+@app.route('/user_update_form/<user_id>', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def user_update_form(user_id):
+    user = users_collection.find_one({'_id': ObjectId(user_id)})
+    user['_id'] = str(user['_id'])
+    user['username'] = str(user['username'])
+    user['email'] = str(user['email'])
+    user['role'] = str(user['role'])
+    return render_template('page/admin/user_update_form.html', user=user)
+
+
+@app.route('/user_update/<user_id>', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def user_update(user_id):
+    if request.method == 'POST':
+        role = request.form.get('role')
+        users_collection.update_one({'_id': ObjectId(user_id)}, {'$set': {'role': role}})
+        return redirect(url_for('get_all_users'))
+
+
+@app.route('/all_users/<user_id>', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def get_seller(user_id):
+    user = users_collection.find_one({'_id': ObjectId(user_id)})
+    user['_id'] = str(user['_id'])
+    user['username'] = str(user['username'])
+    user['email'] = str(user['email'])
+    user['role'] = str(user['role'])
+    return render_template('page/user/seller_profile.html', seller=user)
+
+
+
 @app.route("/register", methods=['POST', 'GET'])
 @cross_origin(supports_credentials=True)
 def register():
@@ -350,7 +459,8 @@ def register():
     if request.method == "POST":
         current_user = users_collection.find_one({"email": session["email"]})
         if current_user['role'] != 'admin':
-            return redirect(url_for("logged_in"))
+            message = 'You need to login as admin before adding a user.'
+            return redirect(url_for("products", message=message))
         username = request.form.get("username")
         email = request.form.get("email")
 
@@ -361,27 +471,32 @@ def register():
         email_found = users_collection.find_one({"email": email})
         if user_found:
             message = 'There already is a user by that username'
+            flash(message)
             return render_template('page/register.html', message=message)
         if email_found:
             message = 'This email already exists in database'
+            flash(message)
             return render_template('page/register.html', message=message)
         if password1 != password2:
             message = 'Passwords should match!'
+            flash(message)
             return render_template('page/register.html', message=message)
         else:
             hashed = bcrypt.hashpw(password2.encode('utf-8'), bcrypt.gensalt())
             user_input = {'username': username, 'email': email, 'password': hashed, 'role': 'user'}
             users_collection.insert_one(user_input)
+            flash("User has been registered successfully")
             return redirect(url_for('registered'))
     else:
         return render_template('page/register.html', message=message)
 
 
-@app.route("/registe    red")
+@app.route("/registered")
 @cross_origin(supports_credentials=True)
 def registered():
     if "email" in session:
         session.pop("email")
+        flash("You have been logged out")
         return render_template('page/registered.html')
     else:
         return redirect(url_for("login"))
@@ -392,7 +507,7 @@ def registered():
 def login():
     message = 'Please login to your account'
     if "email" in session:
-        return redirect(url_for("logged_in"))
+        return redirect(url_for("products"))
 
     if request.method == "POST":
         email = request.form.get("email")
@@ -405,14 +520,17 @@ def login():
 
             if bcrypt.checkpw(password.encode('utf-8'), passwordcheck):
                 session["email"] = email_val
-                return redirect(url_for('logged_in'))
+                return redirect(url_for('products'))
             else:
                 if "email" in session:
-                    return redirect(url_for("logged_in"))
+                    message = 'You are already logged in'
+                    return redirect(url_for("products", message=message))
                 message = 'Wrong password'
-                return render_template('page/login.html', message=message)
+                flash(message)
+                return render_template('page/product/all_products.html', message=message)
         else:
             message = 'Email not found'
+            flash(message)
             return render_template('page/login.html', message=message)
     return render_template('page/login.html', message=message)
 
@@ -432,6 +550,7 @@ def logged_in():
 def logout():
     if "email" in session:
         session.pop("email", None)
+        flash("You have been logged out")
         return render_template("page/logout.html")
     else:
         return redirect(url_for("login"))

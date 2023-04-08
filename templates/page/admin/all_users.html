@@ -1,0 +1,51 @@
+{% extends "base/logged_in_base.html" %}
+
+{% block title %}Users{% endblock %}
+{% block content %}
+
+<div class="container">
+    <div class="container" style="display: inline-block">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Users</h1>
+                <!--User add button redirects to user_form.html page-->
+                <form action="{{ url_for('user_add_form') }}" method="post">
+                    <input type="submit" value="Add User" class="btn btn-primary">
+                </form>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in user_list %}
+                            <tr>
+                                <td>{{ user._id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.role }}</td>
+                                <td>
+                                    <!--Show user_delete/<user_id> as button-->
+                                    <!--Show user_update/<user_id> as button-->
+                                    <form action="{{ url_for('user_update_form', user_id=user._id) }}" method="post">
+                                        <input type="submit" value="Update" class="btn btn-primary">
+                                    </form>
+                                    <form action="{{ url_for('user_delete', user_id=user._id) }}" method="post">
+                                        <input type="submit" value="Delete" class="btn btn-danger">
+                                    </form>
+
+                            </tr>
+                            {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
