@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, url_for, redirect, s
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask_cors import CORS, cross_origin
-import bcrypt
+import werkzeug.security as ws
 
 app = Flask(__name__)
 app.secret_key = "deployment"
@@ -201,7 +201,7 @@ class User:
         return 'Rating updated'
 
     def save(self):
-        encrypted_password = bcrypt.hashpw(self.password.encode('utf-8'), bcrypt.gensalt())
+        encrypted_password = ws.generate_password_hash(self.password, method='pbkdf2:sha256', salt_length=8)
         user_dict = {'username': self.username, 'email': self.email, 'password': encrypted_password, 'reviews': self.reviews, 'role': self.role}
         try:
             user_id = users_collection.insert_one(user_dict).inserted_id
@@ -381,7 +381,7 @@ def user_add():
         if password != confirm_password:
             flash('Passwords do not match')
             return redirect(url_for('user_add_form'))
-        password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        password = ws.generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
         role = request.form.get('role')
         user = {
             'username': username,
@@ -469,7 +469,7 @@ def register():
             flash(message)
             return render_template('page/register.html', message=message, role=current_user['role'])
         else:
-            hashed = bcrypt.hashpw(password2.encode('utf-8'), bcrypt.gensalt())
+            hashed = ws.generate_password_hash(password2, method='pbkdf2:sha256', salt_length=8)
             user_input = {'username': username, 'email': email, 'password': hashed, 'role': 'user'}
             users_collection.insert_one(user_input)
             flash("User has been registered successfully")
@@ -504,7 +504,7 @@ def login():
             username_val = username_found['username']
             passwordcheck = username_found['password']
 
-            if bcrypt.checkpw(password.encode('utf-8'), passwordcheck):
+            if ws.check_password_hash(passwordcheck, password):
                 session["username"] = username_val
                 session['role'] = users_collection.find_one({"username": username})['role']
                 return redirect(url_for('products'))
@@ -514,7 +514,7 @@ def login():
                     return redirect(url_for("products", message=message))
                 message = 'Wrong password'
                 flash(message)
-                return render_template('page/product/products.html', message=message)
+                return render_template('page/index.html', message=message)
         else:
             message = 'Username not found'
             flash(message)
@@ -545,4 +545,4 @@ def logout():
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8000, debug=False)
+    app.run(host="0.0.0.0", port=8000, debug=True)
