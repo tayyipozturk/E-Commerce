@@ -1,0 +1,21 @@
+{% extends "base/logged_in_base.html" %}
+
+{% block title %}Add Product{% endblock %}
+{% block content %}
+
+    <h1>Choose Category</h1>
+
+    <form style="width: 50%; margin: 0 auto" action="{{ url_for('item_form') }}" method="post">
+        <div class="form-group">
+            <label for="category">Categories</label>
+            <select class="form-control" id="category" name="category">
+                <option value="Clothing">Clothing</option>
+                <option value="Computer Components">Computer Components</option>
+                <option value="Monitors">Monitors</option>
+                <option value="Snacks">Snacks</option>
+            </select>
+        <button type="submit" class="btn btn-primary" >Next</button>
+        </div>
+    </form>
+
+{% endblock %}

@@ -24,6 +24,7 @@ class Item:
         self.description = description
         self.price = price
         self.seller = seller
+        self.seller_id = users_collection.find_one({'username': seller})['_id']
         self.image = image
         self.size = size
         self.colour = colour
@@ -45,28 +46,48 @@ class Item:
     def save(self):
         item_dict = {'category': self.category, 'name': self.name, 'description': self.description, 'price': self.price, 'seller': self.seller,
                      'image': self.image, 'size': self.size, 'colour': self.colour, 'spec': self.spec,
-                     'rating': self.rating, 'reviews': self.reviews}
+                     'rating': self.rating, 'reviews': self.reviews, 'rate_count': self.rate_count, 'seller_id': self.seller_id}
         self._id = items_collection.insert_one(item_dict).inserted_id
         return str(self._id)
 
 
-@app.route('/items', methods=['POST'])
+@app.route('/items/<category>', methods=['POST'])
 @cross_origin(supports_credentials=True)
-def add_item():
-    category = request.json.get('category')
-    name = request.json.get('name')
-    description = request.json.get('description')
-    price = request.json.get('price')
-    seller = request.json.get('seller')
-    image = request.json.get('image')
-    size = request.json.get('size')
-    colour = request.json.get('colour')
-    spec = request.json.get('spec')
-    if name is None or price is None or seller is None:
-        return jsonify({'error': 'Name, price and seller are required'})
-    item = Item(category, name, description, price, seller, image, size, colour, spec)
-    item_id = item.save()
-    return jsonify({'success': True, 'item_id': item_id})
+def add_item(category):
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        return redirect(url_for('products'))
+    name = request.form.get('name')
+    description = request.form.get('description')
+    price = request.form.get('price')
+    image = request.form.get('image')
+    seller = request.form.get('seller')
+    if category == 'Clothing':
+        size = request.form.get('size')
+        colour = request.form.get('colour')
+        item = Item(category, name, description, price, seller, image, size, colour)
+    elif category == 'Computer Components' or category == 'Monitors':
+        spec = request.form.get('spec')
+        item = Item(category, name, description, price, seller, image, spec=spec)
+    else:
+        item = Item(category, name, description, price, seller, image)
+    item.save()
+    return redirect(url_for('products'))
+
+
+@app.route('/category_choice', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def category_choice():
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/category_form.html', role=current_user['role'])
+
+
+@app.route('/item_form', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def item_form():
+    category = request.form.get('category')
+    current_user = users_collection.find_one({'username': session['username']})
+    return render_template('page/product/product_form.html', category=category, role=current_user['role'])
 
 
 @app.route('/items/<item_id>')
@@ -100,11 +121,11 @@ def update_item(item_id):
     return 'Item updated'
 
 
-@app.route('/items/<item_id>', methods=['DELETE'])
+@app.route('/delete_item/<item_id>', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def delete_item(item_id):
     items_collection.delete_one({'_id': ObjectId(item_id)})
-    return 'Item deleted'
+    return redirect(url_for('products'))
 
 
 @app.route('/items', methods=['GET'])
@@ -150,7 +171,7 @@ def products(message=None):
             item['spec'] = str(item['spec'])
             item['image'] = str(item['image'])
             seller_id = users_collection.find_one({'username': item['seller']})
-            item.update({'seller_id': str(seller_id['_id'])})
+            item['seller_id'] = str(seller_id['_id'])
             item['seller_id'] = str(item['seller_id'])
             product_list.append(item)
     else:
@@ -167,7 +188,7 @@ def products(message=None):
                 item['spec'] = str(item['spec'])
                 item['image'] = str(item['image'])
                 seller_id = users_collection.find_one({'username': item['seller']})
-                item.update({'seller_id': str(seller_id['_id'])})
+                item['seller_id'] = str(seller_id['_id'])
                 item['seller_id'] = str(item['seller_id'])
                 product_list.append(item)
 
@@ -356,14 +377,14 @@ def get_users():
     return render_template('page/admin/all_users.html', user_list=user_list, role=current_user['role'])
 
 
-@app.route('/user_delete/<user_id>', methods=['GET', 'POST'])
+@app.route('/users/delete/<user_id>', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
-def user_delete(user_id):
+def delete_user(user_id):
     users_collection.delete_one({'_id': ObjectId(user_id)})
     return redirect(url_for('get_users'))
 
 
-@app.route('/user/add/form', methods=['GET', 'POST'])
+@app.route('/users/form', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def user_add_form():
     current_user = users_collection.find_one({'username': session['username']})
@@ -443,7 +464,7 @@ def register():
     if "username" not in session:
         return redirect(url_for("login"))
     current_user = users_collection.find_one({"username": session["username"]})
-    render_template('page/register.html', role=current_user['role'])
+    render_template('page/admin/user_add_form.html', role=current_user['role'])
     if request.method == "POST":
         if current_user['role'] != 'admin':
             message = 'You need to login as admin before adding a user.'
@@ -454,20 +475,21 @@ def register():
         password1 = request.form.get("password1")
         password2 = request.form.get("password2")
 
+        role = request.form.get("role")
         user_found = users_collection.find_one({"username": username})
         email_found = users_collection.find_one({"email": email})
         if user_found:
             message = 'There already is a user by that username'
             flash(message)
-            return render_template('page/register.html', message=message, role=current_user['role'])
+            return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         if email_found:
             message = 'This email already exists in database'
             flash(message)
-            return render_template('page/register.html', message=message, role=current_user['role'])
+            return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         if password1 != password2:
             message = 'Passwords should match!'
             flash(message)
-            return render_template('page/register.html', message=message, role=current_user['role'])
+            return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         else:
             hashed = ws.generate_password_hash(password2, method='pbkdf2:sha256', salt_length=8)
             user_input = {'username': username, 'email': email, 'password': hashed, 'role': 'user'}
