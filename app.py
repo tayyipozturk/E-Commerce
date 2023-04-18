@@ -30,24 +30,19 @@ class Item:
         self.colour = colour
         self.spec = spec
         self.rating = 0
-        self.rate_count = 0
         self.reviews = []
-
-    def insert_review(self, review):
-        self.reviews.append(review)
-        items_collection.update_one({'_id': ObjectId(self._id)}, {'$push': {'reviews': review}})
-        return 'Review inserted'
-
-    def rate(self, rating):
-        self.rate_count += 1
-        self.rating = (self.rating * (self.rate_count - 1) + rating) / self.rate_count
-        items_collection.update_one({'_id': ObjectId(self._id)}, {'$set': {'rating': self.rating}})
+        self.rates = []
+        users_collection.find_one({'username': seller})['items'].append(self._id)
 
     def save(self):
         item_dict = {'category': self.category, 'name': self.name, 'description': self.description, 'price': self.price, 'seller': self.seller,
                      'image': self.image, 'size': self.size, 'colour': self.colour, 'spec': self.spec,
-                     'rating': self.rating, 'reviews': self.reviews, 'rate_count': self.rate_count, 'seller_id': self.seller_id}
+                     'rating': self.rating, 'reviews': self.reviews, 'seller_id': self.seller_id, 'rates': self.rates}
         self._id = items_collection.insert_one(item_dict).inserted_id
+
+        user = users_collection.find_one({'username': self.seller})
+        user['items'].append(str(self._id))
+        users_collection.update_one({'username': self.seller}, {'$set': {'items': user['items']}})
         return str(self._id)
 
 
@@ -62,6 +57,10 @@ def add_item(category):
     price = request.form.get('price')
     image = request.form.get('image')
     seller = request.form.get('seller')
+    if seller not in [user['username'] for user in users_collection.find({})]:
+        flash('Seller does not exist')
+        message = 'Seller user does not exist'
+        return render_template('page/product/product_form.html', category=category, message=message)
     if category == 'Clothing':
         size = request.form.get('size')
         colour = request.form.get('colour')
@@ -124,6 +123,37 @@ def update_item(item_id):
 @app.route('/delete_item/<item_id>', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def delete_item(item_id):
+    item = items_collection.find_one({'_id': ObjectId(item_id)})
+    seller_id = item['seller_id']
+    print(item)
+    user = users_collection.find_one({'_id': seller_id})
+
+    for review in item['reviews']:
+        reviewer = users_collection.find_one({'_id': ObjectId(review[0])})
+        for i in range(len(reviewer['reviews'])):
+            if reviewer['reviews'][i][0] == str(item_id):
+                reviewer['reviews'].pop(i)
+                break
+        users_collection.update_one({'_id': ObjectId(review[0])}, {'$set': {'reviews': reviewer['reviews']}})
+
+    for rate in item['rates']:
+        rater = users_collection.find_one({'_id': ObjectId(rate[0])})
+        for i in range(len(rater['rates'])):
+            if rater['rates'][i][0] == str(item_id):
+                rater['rates'].pop(i)
+                break
+        if len(rater['rates']) == 0:
+            rater['rating'] = 0
+        else:
+            rater['rating'] = sum([rate[2] for rate in rater['rates']]) / len(rater['rates'])
+        users_collection.update_one({'_id': ObjectId(rate[0])}, {'$set': {'rates': rater['rates']}})
+
+    # pop item from user's items
+    for i in range(len(user['items'])):
+        if user['items'][i] == item_id:
+            user['items'].pop(i)
+            users_collection.update_one({'_id': seller_id}, {'$set': {'items': user['items']}})
+            break
     items_collection.delete_one({'_id': ObjectId(item_id)})
     return redirect(url_for('products'))
 
@@ -170,8 +200,7 @@ def products(message=None):
             item['colour'] = str(item['colour'])
             item['spec'] = str(item['spec'])
             item['image'] = str(item['image'])
-            seller_id = users_collection.find_one({'username': item['seller']})
-            item['seller_id'] = str(seller_id['_id'])
+            item['seller_id'] = str(item['seller_id'])
             item['seller_id'] = str(item['seller_id'])
             product_list.append(item)
     else:
@@ -199,31 +228,95 @@ def products(message=None):
         return render_template('page/index.html', product_list=product_list)
 
 
+@app.route("/add_review/<item_id>", methods=['POST'])
+@cross_origin(supports_credentials=True)
+def add_review(item_id):
+    review = request.form.get('review')
+    if review is None or review == '':
+        return redirect(url_for('products', message='Review cannot be empty'))
+
+    item = items_collection.find_one({'_id': ObjectId(item_id)})
+    current_user = users_collection.find_one({'username': session['username']})
+
+    items_review = [str(current_user['_id']), current_user['username'], review]
+    users_review = [str(item_id), item['name'], review]
+
+    for i in range(len(item['reviews'])):
+        if item['reviews'][i][0] == str(current_user['_id']):
+            item['reviews'][i] = items_review
+            items_collection.update_one({'_id': ObjectId(item_id)}, {'$set': {'reviews': item['reviews']}})
+            for j in range(len(current_user['reviews'])):
+                if current_user['reviews'][j][0] == str(item_id):
+                    current_user['reviews'][j] = users_review
+                    users_collection.update_one({'_id': ObjectId(current_user['_id'])}, {'$set': {'reviews': current_user['reviews']}})
+                    return redirect(url_for('get_product', item_id=item_id))
+
+    item['reviews'].append(items_review)
+    items_collection.update_one({'_id': ObjectId(item_id)}, {'$set': {'reviews': item['reviews']}})
+    current_user['reviews'].append(users_review)
+    users_collection.update_one({'_id': ObjectId(current_user['_id'])}, {'$set': {'reviews': current_user['reviews']}})
+    return redirect(url_for('get_product', item_id=item_id))
+
+
+@app.route("/add_rating/<item_id>", methods=['POST'])
+@cross_origin(supports_credentials=True)
+def add_rating(item_id):
+    rating = request.form.get('rating')
+    if rating is None or rating == '':
+        return redirect(url_for('get_product', item_id=item_id, message='Rating cannot be empty'))
+
+    item = items_collection.find_one({'_id': ObjectId(item_id)})
+    current_user = users_collection.find_one({'username': session['username']})
+
+    items_rating = [str(current_user['_id']), current_user['username'], rating]
+    users_rating = [str(item_id), item['name'], rating]
+
+    for i in range(len(item['rates'])):
+        if item['rates'][i][0] == str(current_user['_id']):
+            item['rates'][i] = items_rating
+            for j in range(len(current_user['rates'])):
+                if current_user['rates'][j][0] == str(item_id):
+                    current_user['rates'][j] = users_rating
+                    updateRating(item, current_user)
+                    return redirect(url_for('get_product', item_id=item_id))
+
+    item['rates'].append(items_rating)
+    current_user['rates'].append(users_rating)
+    updateRating(item, current_user)
+    return redirect(url_for('get_product', item_id=item_id, message='Rating added'))
+
+
+def updateRating(item, user):
+    total_rating = 0
+    for rate in item['rates']:
+        total_rating += int(rate[2])
+    item['rating'] = float(total_rating) / len(item['rates'])
+    items_collection.update_one({'_id': ObjectId(item['_id'])}, {'$set': {'rates': item['rates']}})
+    items_collection.update_one({'_id': ObjectId(item['_id'])}, {'$set': {'rating': item['rating']}})
+    total_rating = 0
+    for rate in user['rates']:
+        total_rating += int(rate[2])
+    if len(user['rates']) == 0:
+        user['rating'] = 0
+    else:
+        user['rating'] = float(total_rating) / len(user['rates'])
+    users_collection.update_one({'_id': ObjectId(user['_id'])}, {'$set': {'rates': user['rates']}})
+    users_collection.update_one({'_id': ObjectId(user['_id'])}, {'$set': {'rating': user['rating']}})
+
+
 class User:
     def __init__(self, username, email, password, role):
         self.username = username
         self.email = email
         self.password = password
         self.role = role
+        self.items = []
         self.rating = 0
-        self.rate_count = 0
+        self.rates = []
         self.reviews = []
 
-    def insert_review_to_item(self, item_id, review):
-        self.reviews.append(review)
-        items_collection.update_one({'_id': ObjectId(item_id)}, {'$push': {'reviews': review}})
-        return 'Review inserted'
-
-    def rate(self, item_id):
-        items_collection.update_one({'_id': ObjectId(item_id)}, {'$inc': {'rate_count': 1}})
-        items_collection.update_one({'_id': ObjectId(item_id)}, {'$set': {'rating': {'$avg': ['$rating', self.rating]}}})
-        self.rate_count += 1
-        self.rating = (self.rating * (self.rate_count - 1) + self.rating) / self.rate_count
-        return 'Rating updated'
-
     def save(self):
-        encrypted_password = ws.generate_password_hash(self.password, method='pbkdf2:sha256', salt_length=8)
-        user_dict = {'username': self.username, 'email': self.email, 'password': encrypted_password, 'reviews': self.reviews, 'role': self.role}
+        user_dict = {'username': self.username, 'email': self.email, 'password': self.password, 'role': self.role, 'items': self.items, 'rating': self.rating, 'rates': self.rates, 'reviews': self.reviews}
         try:
             user_id = users_collection.insert_one(user_dict).inserted_id
         except:
@@ -246,7 +339,7 @@ def add_user():
         return jsonify({'error': 'Password is missing'})
     if role is None:
         role = 'user'
-
+    password = ws.generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
     user_id = User(username, email, password, role).save()
     if user_id == "error: user with username or email already exists":
         return jsonify({'success': False, 'error': 'user with username or email already exists'})
@@ -349,7 +442,8 @@ def get_product(item_id):
     item['seller'] = str(item['seller'])
     seller = users_collection.find_one({'username': item['seller']})
     seller_id = str(seller['_id'])
-    item['reviews'] = [str(review) for review in item['reviews']]
+    item['reviews'] = [str([review[1], review[2]]) for review in item['reviews']]
+    item['rates'] = [str([rating[1], rating[2]]) for rating in item['rates']]
     item['rating'] = str(item['rating'])
     item['price'] = str(item['price'])
     item['size'] = str(item['size'])
@@ -365,6 +459,8 @@ def get_product(item_id):
 @app.route('/users', methods=['GET'])
 @cross_origin(supports_credentials=True)
 def get_users():
+    if 'username' not in session:
+        return redirect(url_for('logout'))
     user_list = []
     for user in users_collection.find():
         user['_id'] = str(user['_id'])
@@ -380,7 +476,60 @@ def get_users():
 @app.route('/users/delete/<user_id>', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def delete_user(user_id):
+    isLoggedInUser = False
+    if 'username' in session:
+        isLoggedInUser = True
+    user = users_collection.find_one({'_id': ObjectId(user_id)})
+    users_items = user['items']
+    users_reviews = user['reviews']
+    users_rates = user['rates']
+    # delete ratings and reviews of the item from other users
+    for item in users_items:
+        item_reviews = items_collection.find_one({'_id': ObjectId(item)})['reviews']
+        item_rates = items_collection.find_one({'_id': ObjectId(item)})['rates']
+        for review in item_reviews:
+            reviewer_id = review[0]
+            reviewer_user = users_collection.find_one({'_id': ObjectId(reviewer_id)})
+            for i in range(len(reviewer_user['reviews'])):
+                if reviewer_user['reviews'][i][0] == item:
+                    reviewer_user['reviews'].pop(i)
+                    break
+            users_collection.update_one({'_id': ObjectId(reviewer_id)}, {'$set': {'reviews': reviewer_user['reviews']}})
+        for rate in item_rates:
+            rater_id = rate[0]
+            rater_user = users_collection.find_one({'_id': ObjectId(rater_id)})
+            for i in range(len(rater_user['rates'])):
+                if rater_user['rates'][i][0] == item:
+                    rater_user['rates'].pop(i)
+                    rater_user['rating'] = (rater_user['rating'] * len(rater_user['rates']) + 1) / len(rater_user['rates'])
+                    break
+            users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rates': rater_user['rates']}})
+            users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rating': rater_user['rating']}})
+        items_collection.delete_one({'_id': ObjectId(item)})
+    # delete reviews of the user from items they reviewed
+    for review in users_reviews:
+        reviewed_item = review[0]
+        item = items_collection.find_one({'_id': ObjectId(reviewed_item)})
+        for i in range(len(item['reviews'])):
+            if item['reviews'][i][0] == user_id:
+                item['reviews'].pop(i)
+                break
+        items_collection.update_one({'_id': ObjectId(reviewed_item)}, {'$set': {'reviews': item['reviews']}})
+    # delete rates of the user from items they rated
+    for rate in users_rates:
+        rated_item = rate[0]
+        item = items_collection.find_one({'_id': ObjectId(rated_item)})
+        for i in range(len(item['rates'])):
+            if item['rates'][i][0] == user_id:
+                item['rates'].pop(i)
+                item['rating'] = (item['rating'] * len(item['rates']) + 1) / len(item['rates'])
+                break
+        items_collection.update_one({'_id': ObjectId(rated_item)}, {'$set': {'rates': item['rates']}})
+        items_collection.update_one({'_id': ObjectId(rated_item)}, {'$set': {'rating': item['rating']}})
+
     users_collection.delete_one({'_id': ObjectId(user_id)})
+    if isLoggedInUser:
+        return redirect(url_for('logout'))
     return redirect(url_for('get_users'))
 
 
@@ -399,18 +548,12 @@ def user_add():
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+        role = request.form.get('role')
         if password != confirm_password:
             flash('Passwords do not match')
             return redirect(url_for('user_add_form'))
         password = ws.generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
-        role = request.form.get('role')
-        user = {
-            'username': username,
-            'email': email,
-            'password': password,
-            'role': role
-        }
-        users_collection.insert_one(user)
+        User(username, email, password, role).save()
         return redirect(url_for('get_users'))
 
 
@@ -492,8 +635,7 @@ def register():
             return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         else:
             hashed = ws.generate_password_hash(password2, method='pbkdf2:sha256', salt_length=8)
-            user_input = {'username': username, 'email': email, 'password': hashed, 'role': 'user'}
-            users_collection.insert_one(user_input)
+            User(username, email, hashed, role).save()
             flash("User has been registered successfully")
             return redirect(url_for('registered'))
     else:
