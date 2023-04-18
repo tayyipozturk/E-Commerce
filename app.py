@@ -186,7 +186,6 @@ def products(message=None):
             'Computer Components': request.form.get('showComputerComponents'),
             'Monitors': request.form.get('showMonitors'), 'Snacks': request.form.get('showSnacks')}
 
-    print(show)
     # get all items from database
     product_list = []
     if show['Clothing'] != 'True' and show['Computer Components'] != 'True' and show['Monitors'] != 'True' and show['Snacks'] != 'True':
@@ -585,12 +584,31 @@ def user_update(user_id):
 @app.route('/profile', methods=['GET'])
 @cross_origin(supports_credentials=True)
 def profile():
+    user = users_collection.find_one({'username': session['username']})
+    user['_id'] = str(user['_id'])
+    user['username'] = str(user['username'])
+    user['email'] = str(user['email'])
+    user['role'] = str(user['role'])
+    user['reviews'] = [{'item_id': review[0], 'item_name': review[1], 'review': review[2]} for review in
+                       user['reviews']]
+    user['rating'] = str(user['rating'])
+
+    product_list = []
+    for item_id in user['items']:
+        item = items_collection.find_one({'_id': ObjectId(item_id)})
+        item['_id'] = str(item['_id'])
+        item['name'] = str(item['name'])
+        item['description'] = str(item['description'])
+        item['price'] = str(item['price'])
+        item['rating'] = str(item['rating'])
+        item['image'] = str(item['image'])
+        item['category'] = str(item['category'])
+        item['seller'] = str(item['seller'])
+        product_list.append(item)
+
     current_user = users_collection.find_one({'username': session['username']})
-    current_user['_id'] = str(current_user['_id'])
-    current_user['username'] = str(current_user['username'])
-    current_user['email'] = str(current_user['email'])
-    current_user['role'] = str(current_user['role'])
-    return render_template('page/user/profile.html', user=current_user, role=current_user['role'])
+    return render_template('page/user/profile.html', user=user, role=current_user['role'],
+                           product_list=product_list)
 
 
 @app.route('/users/<user_id>', methods=['GET', 'POST'])
@@ -601,8 +619,24 @@ def get_user(user_id):
     user['username'] = str(user['username'])
     user['email'] = str(user['email'])
     user['role'] = str(user['role'])
+    user['reviews'] = [{'item_id': review[0], 'item_name': review[1], 'review': review[2]} for review in user['reviews']]
+    user['rating'] = str(user['rating'])
+
+    product_list = []
+    for item_id in user['items']:
+        item = items_collection.find_one({'_id': ObjectId(item_id)})
+        item['_id'] = str(item['_id'])
+        item['name'] = str(item['name'])
+        item['description'] = str(item['description'])
+        item['price'] = str(item['price'])
+        item['rating'] = str(item['rating'])
+        item['image'] = str(item['image'])
+        item['category'] = str(item['category'])
+        item['seller'] = str(item['seller'])
+        product_list.append(item)
+
     current_user = users_collection.find_one({'username': session['username']})
-    return render_template('page/user/seller_profile.html', seller=user, role=current_user['role'])
+    return render_template('page/user/seller_profile.html', seller=user, role=current_user['role'], product_list=product_list)
 
 
 @app.route("/register", methods=['POST', 'GET'])

@@ -81,7 +81,7 @@
                                 <td><a href="{{ url_for("get_product", item_id=product._id) }}">
                                     <img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50">
                                 </a></td>
-                                <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-primary">{{ product.name }}</a></td>
+                                <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-outline-dark">{{ product.name }}</a></td>
                                 <td>{{ product.description }}</td>
                                 <td style="color: #85BB65">{{ product.price }} $</td>
                                 <td><a href="{{ url_for("get_user", user_id=product.seller_id) }}">{{ product.seller }}</a></td>

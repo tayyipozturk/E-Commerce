@@ -7,11 +7,94 @@
         <div class="row">
             <div class="col-md-auto">
                 <h1>Seller Profile</h1>
-                <p>Username: {{ seller.username }}</p>
-                <p>Email: {{ seller.email }}</p>
-                Buraya SELLERIN PRODUCTLARINI EKLE
+                <p><b>Username:</b> {{ seller.username }}</p>
+                <p><b>Email:</b> {{ seller.email }}</p>
+                <p><b>Average Given Rating:</b> {{ seller.rating }}</p>
+                <div class="container">
+                    <h2>Reviews</h2>
+                    <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for review in seller.reviews %}
+                            <tr>
+                                <td><a href="{{ url_for("get_product", item_id=review.item_id) }}" class="block" >{{ review.item_name }}</a></td>
+                                <td>{{ review.review }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+                <div class="container">
+                    <h2>Products</h2>
+                    <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th width="100">Price $</th>
+                            <th>Size</th>
+                            <th>Colour</th>
+                            <th>Spec</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_list %}
+                            <tr>
+                                <td><a href="{{ url_for("get_product", item_id=product._id) }}">
+                                    <img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50">
+                                </a></td>
+                                <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-outline-dark">{{ product.name }}</a></td>
+                                <td>{{ product.description }}</td>
+                                <td style="color: #85BB65">{{ product.price }} $</td>
+                                {% if product.size != "None" %}
+                                    <td>{{ product.size or product.size != None}}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.colour != "None" or product.colour != None%}
+                                    <td>{{ product.colour }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.spec != "None" or product.spec != None %}
+                                    <td>{{ product.spec }}</td>
+                                {% else %}
+                                    <td></td>
+                                {% endif %}
+                                {% if product.rating == "0" %}
+                                    <td>Not rated yet</td>
+                                {% else %}
+                                     <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-dark">{{ product.rating }}</a></td>
+                                {% endif %}
+                                {% if product.reviews == [] %}
+                                    <td>Not reviewed yet</td>
+                                {% else %}
+                                     <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-dark">{{ product.review }}Reviews</a></td>
+                                {% endif %}
+                                {% if role == "admin" %}
+                                    <td>
+                                        <form action="{{ url_for('delete_item', item_id=product._id) }}" method="POST">
+                                            <input type="submit" value="Delete" class="btn btn-danger">
+                                        </form>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
             </div>
         </div>
-    </div>
 
 {% endblock %}
