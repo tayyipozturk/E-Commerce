@@ -9,10 +9,9 @@ app.secret_key = "deployment"
 CORS(app, support_credentials=True)
 
 client = MongoClient("mongodb+srv://tayyipozturk:ceng495hw1@cluster0.egn5zal.mongodb.net/?retryWrites=true&w=majority")
-db = client['commerce']
+db = client['e-commerce']
 items_collection = db['items']
 users_collection = db['users']
-cart_collection = db['cart']
 users_collection.create_index([('username', 1)], unique=True)
 
 
