@@ -141,11 +141,12 @@ def delete_item(item_id):
         for i in range(len(rater['rates'])):
             if rater['rates'][i][0] == str(item_id):
                 rater['rates'].pop(i)
+                if len(rater['rates']) == 0:
+                    rater['rating'] = 0
+                else:
+                    rater['rating'] = sum([int(rate[2]) for rate in rater['rates']]) / len(rater['rates'])
+                    users_collection.update_one({'_id': ObjectId(rate[0])}, {'$set': {'rating': rater['rating']}})
                 break
-        if len(rater['rates']) == 0:
-            rater['rating'] = 0
-        else:
-            rater['rating'] = sum([rate[2] for rate in rater['rates']]) / len(rater['rates'])
         users_collection.update_one({'_id': ObjectId(rate[0])}, {'$set': {'rates': rater['rates']}})
 
     # pop item from user's items
@@ -442,8 +443,8 @@ def get_product(item_id):
     item['seller'] = str(item['seller'])
     seller = users_collection.find_one({'username': item['seller']})
     seller_id = str(seller['_id'])
-    item['reviews'] = [str([review[1], review[2]]) for review in item['reviews']]
-    item['rates'] = [str([rating[1], rating[2]]) for rating in item['rates']]
+    item['reviews'] = [{'user_id': review[0], 'user_name': review[1], 'review': review[2]} for review in item['reviews']]
+    item['rates'] = [{'user_id': rating[0], 'user_name': rating[1], 'review': rating[2]} for rating in item['rates']]
     item['rating'] = str(item['rating'])
     item['price'] = str(item['price'])
     item['size'] = str(item['size'])
@@ -501,7 +502,7 @@ def delete_user(user_id):
             for i in range(len(rater_user['rates'])):
                 if rater_user['rates'][i][0] == item:
                     rater_user['rates'].pop(i)
-                    rater_user['rating'] = (rater_user['rating'] * len(rater_user['rates']) + 1) / len(rater_user['rates'])
+                    rater_user['rating'] = sum([int(rate[2]) for rate in rater_user['rates']]) / len(rater_user['rates'])
                     break
             users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rates': rater_user['rates']}})
             users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rating': rater_user['rating']}})
@@ -522,7 +523,10 @@ def delete_user(user_id):
         for i in range(len(item['rates'])):
             if item['rates'][i][0] == user_id:
                 item['rates'].pop(i)
-                item['rating'] = (item['rating'] * len(item['rates']) + 1) / len(item['rates'])
+                if len(item['rates']) > 0:
+                    item['rating'] = sum([int(rate[2]) for rate in item['rates']]) / len(item['rates'])
+                else:
+                    item['rating'] = 0
                 break
         items_collection.update_one({'_id': ObjectId(rated_item)}, {'$set': {'rates': item['rates']}})
         items_collection.update_one({'_id': ObjectId(rated_item)}, {'$set': {'rating': item['rating']}})
