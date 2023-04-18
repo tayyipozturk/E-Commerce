@@ -48,7 +48,7 @@
                             <th>Colour</th>
                             <th>Spec</th>
                             <th>Rating</th>
-                            <th>Reviews</th>
+                            <th width="250">Reviews</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -79,13 +79,7 @@
                                 {% else %}
                                     <td>{{ product.rating }}</td>
                                 {% endif %}
-                                {% if product.reviews %}
-                                    {% for review in product.reviews %}
-                                        <td>{{ review }}</td>
-                                    {% endfor %}
-                                {% else %}
-                                    <td>Not reviewed yet</td>
-                                {% endif %}
+                                    <td><a href="/login">Login</a> to see reviews</td>
                             </tr>
                         {% endfor %}
                     </tbody>
