@@ -482,29 +482,7 @@ def delete_user(user_id):
     users_items = user['items']
     users_reviews = user['reviews']
     users_rates = user['rates']
-    # delete ratings and reviews of the item from other users
-    for item in users_items:
-        item_reviews = items_collection.find_one({'_id': ObjectId(item)})['reviews']
-        item_rates = items_collection.find_one({'_id': ObjectId(item)})['rates']
-        for review in item_reviews:
-            reviewer_id = review[0]
-            reviewer_user = users_collection.find_one({'_id': ObjectId(reviewer_id)})
-            for i in range(len(reviewer_user['reviews'])):
-                if reviewer_user['reviews'][i][0] == item:
-                    reviewer_user['reviews'].pop(i)
-                    break
-            users_collection.update_one({'_id': ObjectId(reviewer_id)}, {'$set': {'reviews': reviewer_user['reviews']}})
-        for rate in item_rates:
-            rater_id = rate[0]
-            rater_user = users_collection.find_one({'_id': ObjectId(rater_id)})
-            for i in range(len(rater_user['rates'])):
-                if rater_user['rates'][i][0] == item:
-                    rater_user['rates'].pop(i)
-                    rater_user['rating'] = sum([int(rate[2]) for rate in rater_user['rates']]) / len(rater_user['rates'])
-                    break
-            users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rates': rater_user['rates']}})
-            users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rating': rater_user['rating']}})
-        items_collection.delete_one({'_id': ObjectId(item)})
+
     # delete reviews of the user from items they reviewed
     for review in users_reviews:
         reviewed_item = review[0]
@@ -528,6 +506,34 @@ def delete_user(user_id):
                 break
         items_collection.update_one({'_id': ObjectId(rated_item)}, {'$set': {'rates': item['rates']}})
         items_collection.update_one({'_id': ObjectId(rated_item)}, {'$set': {'rating': item['rating']}})
+
+    # delete ratings and reviews of the item from other users
+    for item in users_items:
+        item_reviews = items_collection.find_one({'_id': ObjectId(item)})['reviews']
+        item_rates = items_collection.find_one({'_id': ObjectId(item)})['rates']
+        for review in item_reviews:
+            reviewer_id = review[0]
+            if str(reviewer_id) == str(user_id):
+                continue
+            reviewer_user = users_collection.find_one({'_id': ObjectId(reviewer_id)})
+            for i in range(len(reviewer_user['reviews'])):
+                if reviewer_user['reviews'][i][0] == item:
+                    reviewer_user['reviews'].pop(i)
+                    break
+            users_collection.update_one({'_id': ObjectId(reviewer_id)}, {'$set': {'reviews': reviewer_user['reviews']}})
+        for rate in item_rates:
+            rater_id = rate[0]
+            if str(rater_id) == str(user_id):
+                continue
+            rater_user = users_collection.find_one({'_id': ObjectId(rater_id)})
+            for i in range(len(rater_user['rates'])):
+                if rater_user['rates'][i][0] == item:
+                    rater_user['rates'].pop(i)
+                    rater_user['rating'] = sum([int(rate[2]) for rate in rater_user['rates']]) / len(rater_user['rates'])
+                    break
+            users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rates': rater_user['rates']}})
+            users_collection.update_one({'_id': ObjectId(rater_id)}, {'$set': {'rating': rater_user['rating']}})
+        items_collection.delete_one({'_id': ObjectId(item)})
 
     users_collection.delete_one({'_id': ObjectId(user_id)})
     if isLoggedInUser:
