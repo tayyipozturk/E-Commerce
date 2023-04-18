@@ -3,6 +3,12 @@
 {% block title %}Product{% endblock %}
 {% block content %}
 
+    {% if message %}
+        <div class="alert alert-danger" role="alert">
+            {{ message }}
+        </div>
+    {% endif %}
+
     <!--show one item that has been clicked to its name at all_items page-->
     <div class="container">
         <div class="row">
@@ -25,8 +31,61 @@
                 {% if item.spec != "None" %}
                     <p>Spec: {{ item.spec }}</p>
                 {% endif %}
-                <p>Rating: {{ item.rating }}</p>
-                <p>Reviews: {{ item.reviews }}</p>
+                {% if item.rating == 0 %}
+                    <p>Not rated yet</p>
+                {% else %}
+                    <p>Rating: {{ item.rating }}</p>
+                {% endif %}
+            <div class="row">
+                <div class="col-md-auto">
+                    <form id="reviewForm" action="{{ url_for('add_review', item_id=item._id) }}" method="POST">
+                        <label>
+                            <textarea name="review" id="reviewBox" class="form-control" rows="4" style="width: 500px" placeholder="Write your review here"
+                                        onkeydown="if (event.keyCode == 13) { this.form.submit(); return false; }"
+                            ></textarea>
+                        </label>
+                        <input type="submit" id="reviewSubmit" value="Add Review" class="btn btn-outline-dark">
+                    </form>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-md-auto">
+                     <form id="rateForm" action="{{ url_for('add_rating', item_id=item._id) }}" method="POST">
+                         <label>
+                             <select name="rating" id="rating" class="form-control">
+                                 <option value="5">5</option>
+                                 <option value="4">4</option>
+                                 <option value="3">3</option>
+                                 <option value="2">2</option>
+                                 <option value="1">1</option>
+                             </select>
+                         </label>
+                         <input type="submit" id="rateSubmit" value="Rate" class="btn btn-outline-dark">
+                     </form>
+                </div>
+            </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+            <h2>Reviews</h2>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">User</th>
+                            <th scope="col">Review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for review in item.reviews %}
+                            <tr>
+                                <td><a href="{{ url_for("get_user", user_id=review.user_id) }}">{{ review.user_name }}</a></td>
+                                <td>{{ review.review }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

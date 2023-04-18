@@ -24,34 +24,41 @@
         }
     </script>
 <div class="container">
-    <div class="dropdown">
-        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Filter
-        </button>
-        <div class="dropdown-menu dropdown-menu-left" aria-labelledby="dropdownMenuButton">
-                <form action="{{ url_for('products')}}" method="post">
-                    <input type="checkbox" id="sc" name="showClothing" value="False" onclick="change('sc')" > Clothing<br>
-                    <input type="checkbox" id="scc" name="showComputerComponents" value="False" onclick="change('scc')" > Computer Components<br>
-                    <input type="checkbox" id="sm" name="showMonitors" value="False" onclick="change('sm')" > Monitors<br>
-                    <input type="checkbox" id="ss" name="showSnacks" value="False" onclick="change('ss')"> Snacks<br>
-                    <input type="submit" value="Filter">
-                </form>
+    <div class="row">
+        <div class="col-md-9">
+            <h1>Products</h1>
+        </div>
+        <div class="col-md-1">
+            <br>
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Filter
+                </button>
+                <div class="dropdown-menu dropdown-menu-left" aria-labelledby="dropdownMenuButton">
+                    <form action="{{ url_for('products')}}" method="post">
+                        <input type="checkbox" id="sc" name="showClothing" value="False" onclick="change('sc')" > Clothing<br>
+                        <input type="checkbox" id="scc" name="showComputerComponents" value="False" onclick="change('scc')" > Computer Components<br>
+                        <input type="checkbox" id="sm" name="showMonitors" value="False" onclick="change('sm')" > Monitors<br>
+                        <input type="checkbox" id="ss" name="showSnacks" value="False" onclick="change('ss')"> Snacks<br>
+                        <input type="submit" value="Filter">
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            {% if role == "admin" %}
+                <div class="col-md-12">
+                    <br>
+                    <a href="{{ url_for('category_choice') }}" class="btn btn-primary">Add Product</a>
+                </div>
+            {% endif %}
         </div>
     </div>
+
 
     <div class="container" style="display: inline-block">
         <div class="row">
             <div class="col-md-12">
-                <div class="row">
-                    <div class="col-md-12">
-                        <h1>Products</h1>
-                    </div>
-                    {% if role == "admin" %}
-                    <div class="col-md-12">
-                        <a href="{{ url_for('category_choice') }}" class="btn btn-primary">Add Product</a>
-                    </div>
-                    {% endif %}
-                </div>
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -71,7 +78,9 @@
                     <tbody>
                         {% for product in product_list %}
                             <tr>
-                                <td><img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50"></td>
+                                <td><a href="{{ url_for("get_product", item_id=product._id) }}">
+                                    <img src="{{ product.image }}" alt="Image of {{ product.name }}" width="50" height="50">
+                                </a></td>
                                 <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-primary">{{ product.name }}</a></td>
                                 <td>{{ product.description }}</td>
                                 <td style="color: #85BB65">{{ product.price }} $</td>
@@ -94,14 +103,12 @@
                                 {% if product.rating == "0" %}
                                     <td>Not rated yet</td>
                                 {% else %}
-                                    <td>{{ product.rating }}</td>
+                                     <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-dark">{{ product.rating }}</a></td>
                                 {% endif %}
-                                {% if product.reviews %}
-                                    {% for review in product.reviews %}
-                                        <td>{{ review }}</td>
-                                    {% endfor %}
-                                {% else %}
+                                {% if product.reviews == [] %}
                                     <td>Not reviewed yet</td>
+                                {% else %}
+                                     <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-dark">{{ product.review }}Reviews</a></td>
                                 {% endif %}
                                 {% if role == "admin" %}
                                     <td>
