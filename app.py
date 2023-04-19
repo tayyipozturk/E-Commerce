@@ -77,14 +77,19 @@ def add_item(category):
 @cross_origin(supports_credentials=True)
 def category_choice():
     current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        return redirect(url_for('products'))
     return render_template('page/product/category_form.html', role=current_user['role'])
 
 
 @app.route('/item_form', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def item_form():
-    category = request.form.get('category')
     current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        flash('You are not authorized to access this page')
+        return redirect(url_for('products'))
+    category = request.form.get('category')
     return render_template('page/product/product_form.html', category=category, role=current_user['role'])
 
 
@@ -102,6 +107,9 @@ def get_item(item_id):
 @app.route('/items/<item_id>', methods=['PUT'])
 @cross_origin(supports_credentials=True)
 def update_item(item_id):
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        return redirect(url_for('products'))
     category = request.json.get('category')
     name = request.json.get('name')
     description = request.json.get('description')
@@ -122,6 +130,10 @@ def update_item(item_id):
 @app.route('/delete_item/<item_id>', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def delete_item(item_id):
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        flash('You are not authorized to access this page')
+        return redirect(url_for('products'))
     item = items_collection.find_one({'_id': ObjectId(item_id)})
     seller_id = item['seller_id']
     print(item)
@@ -167,7 +179,7 @@ def get_items():
         item['name'] = str(item['name'])
         item['seller'] = str(item['seller'])
         item['reviews'] = [str(review) for review in item['reviews']]
-        item['rating'] = str(item['rating'])
+        item['rating'] = str(round(float(item['rating']), 2))
         item['price'] = str(item['price'])
         item['size'] = str(item['size'])
         item['colour'] = str(item['colour'])
@@ -193,7 +205,7 @@ def products(message=None):
             item['name'] = str(item['name'])
             item['seller'] = str(item['seller'])
             item['reviews'] = [str(review) for review in item['reviews']]
-            item['rating'] = str(item['rating'])
+            item['rating'] = str(round(float(item['rating']), 2))
             item['price'] = str(item['price'])
             item['size'] = str(item['size'])
             item['colour'] = str(item['colour'])
@@ -209,7 +221,7 @@ def products(message=None):
                 item['name'] = str(item['name'])
                 item['seller'] = str(item['seller'])
                 item['reviews'] = [str(review) for review in item['reviews']]
-                item['rating'] = str(item['rating'])
+                item['rating'] = str(round(float(item['rating']), 2))
                 item['price'] = str(item['price'])
                 item['size'] = str(item['size'])
                 item['colour'] = str(item['colour'])
@@ -326,6 +338,11 @@ class User:
 @app.route('/users', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def add_user():
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        flash('You are not authorized to access this page')
+        return redirect(url_for('products'))
+
     username = request.json.get('username')
     email = request.json.get('email')
     password = request.json.get('password')
@@ -348,6 +365,11 @@ def add_user():
 @app.route('/users/<user_id>', methods=['PUT'])
 @cross_origin(supports_credentials=True)
 def update_user(user_id):
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        flash('You are not authorized to access this page')
+        return redirect(url_for('products'))
+
     username = request.json.get('username')
     if username is None:
         return jsonify({'error': 'Username is missing'})
@@ -469,19 +491,28 @@ def get_users():
         user['role'] = str(user['role'])
         user_list.append(user)
     current_user = users_collection.find_one({'username': session['username']})
+    if len(user_list) == 0:
+        return redirect(url_for('logout'))
     return render_template('page/admin/all_users.html', user_list=user_list, role=current_user['role'])
 
 
 @app.route('/users/delete/<user_id>', methods=['GET', 'POST'])
 @cross_origin(supports_credentials=True)
 def delete_user(user_id):
-    isLoggedInUser = False
-    if 'username' in session:
-        isLoggedInUser = True
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        flash('You are not authorized to access this page')
+        return redirect(url_for('products'))
+
     user = users_collection.find_one({'_id': ObjectId(user_id)})
+    username = user['username']
     users_items = user['items']
     users_reviews = user['reviews']
     users_rates = user['rates']
+
+    isLoggedInUser = False
+    if username in session:
+        isLoggedInUser = True
 
     # delete reviews of the user from items they reviewed
     for review in users_reviews:
@@ -596,7 +627,7 @@ def profile():
     user['role'] = str(user['role'])
     user['reviews'] = [{'item_id': review[0], 'item_name': review[1], 'review': review[2]} for review in
                        user['reviews']]
-    user['rating'] = str(user['rating'])
+    user['rating'] = str(round(float(user['rating']), 2))
 
     product_list = []
     for item_id in user['items']:
@@ -605,7 +636,7 @@ def profile():
         item['name'] = str(item['name'])
         item['description'] = str(item['description'])
         item['price'] = str(item['price'])
-        item['rating'] = str(item['rating'])
+        item['rating'] = str(round(float(item['rating']), 2))
         item['image'] = str(item['image'])
         item['category'] = str(item['category'])
         item['seller'] = str(item['seller'])
@@ -625,7 +656,7 @@ def get_user(user_id):
     user['email'] = str(user['email'])
     user['role'] = str(user['role'])
     user['reviews'] = [{'item_id': review[0], 'item_name': review[1], 'review': review[2]} for review in user['reviews']]
-    user['rating'] = str(user['rating'])
+    user['rating'] = str(round(float(user['rating']), 2))
 
     product_list = []
     for item_id in user['items']:
@@ -634,7 +665,7 @@ def get_user(user_id):
         item['name'] = str(item['name'])
         item['description'] = str(item['description'])
         item['price'] = str(item['price'])
-        item['rating'] = str(item['rating'])
+        item['rating'] = str(round(float(item['rating']), 2))
         item['image'] = str(item['image'])
         item['category'] = str(item['category'])
         item['seller'] = str(item['seller'])
@@ -721,7 +752,7 @@ def login():
                     return redirect(url_for("products", message=message))
                 message = 'Wrong password'
                 flash(message)
-                return render_template('page/index.html', message=message)
+                return redirect(url_for("products", message=message))
         else:
             message = 'Username not found'
             flash(message)

@@ -57,17 +57,17 @@
                                 <td><a href="{{ url_for("get_product", item_id=product._id) }}" class="btn btn-outline-dark">{{ product.name }}</a></td>
                                 <td>{{ product.description }}</td>
                                 <td style="color: #85BB65">{{ product.price }} $</td>
-                                {% if product.size != "None" %}
-                                    <td>{{ product.size or product.size != None}}</td>
+                                {% if product.size != "None" and product.size != None %}
+                                    <td>{{ product.size}}</td>
                                 {% else %}
                                     <td></td>
                                 {% endif %}
-                                {% if product.colour != "None" or product.colour != None%}
+                                {% if product.colour != "None" and product.colour != None%}
                                     <td>{{ product.colour }}</td>
                                 {% else %}
                                     <td></td>
                                 {% endif %}
-                                {% if product.spec != "None" or product.spec != None %}
+                                {% if product.spec != "None" and product.spec != None %}
                                     <td>{{ product.spec }}</td>
                                 {% else %}
                                     <td></td>
