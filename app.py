@@ -457,6 +457,8 @@ def get_snacks():
 @app.route('/items/item/<item_id>', methods=['GET'])
 @cross_origin(supports_credentials=True)
 def get_product(item_id):
+    if 'username' not in session:
+        return redirect(url_for('products'))
     item = items_collection.find_one({'_id': ObjectId(item_id)})
     item['_id'] = str(item['_id'])
     item['name'] = str(item['name'])
@@ -480,6 +482,9 @@ def get_product(item_id):
 @app.route('/users', methods=['GET'])
 @cross_origin(supports_credentials=True)
 def get_users():
+    current_user = users_collection.find_one({'username': session['username']})
+    if current_user['role'] != 'admin':
+        return redirect(url_for('products'))
     if 'username' not in session:
         return redirect(url_for('logout'))
     user_list = []
