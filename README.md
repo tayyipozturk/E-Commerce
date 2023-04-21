@@ -6,7 +6,12 @@ https://e-commerce-5hio.onrender.com/
 M. Tayyip OZTURK<br>
 2380806
 
-### Description
+### Design Decisions
+- I designed the application as it has minimum collections as possible. There is two collections named `users` and `items` in the database. 
+- `users` collection stores the information of users such as `_id`, `username`, `password`, `email`, `role`, `rating`, the items that the user is selling in the type of `[<item_id>]`, the rating list they have given in the type of `[[<item_id>, <item_name>, <rate>]]`, and the review list they have given in the type of `[[<item_id>, <item_name>, <review>]]`. 
+- `items` collection stores the information of items such as `_id`, `name`, `category`, `price`, `description`, `seller`, `rates` list, `rating` value, `reviews` list, `colour`, `size`, `spec`, `image_url`. `seller` is the `username` of the user who is selling the item and `seller_id` is the `_id` of the user who is selling the item. `rating` is the average rating of the item. `rates` is the list of rates given for the item in the type of `[[<user_id>, <user_name>, <rate>]]`, `reviews` is the list of reviews given for the item in the type of `[[<user_id>, <user_name>, <review>]]`. `image_url` is the url of the image of the item.
+
+### User Guide
 
 This is a simple e-commerce web application.
 - The main page is the index page. It shows the products available in the database and filters for their categories. Filters are shown in the dropdown menu on the left upper side of the page. User can select a category from the dropdown menu to see the products of that category or many categories.
@@ -43,3 +48,11 @@ This is a simple e-commerce web application.
 | userTester   | tester   | user |
 | Alice        | 12345    | user |
 | Bob          | 12345    | user |
+
+### What is used in the project?
+- Python 3.9.6
+- Flask 1.1.4
+- Werkzeug 0.16.0
+
+### Why Flask?
+- After a little research and the future development plans, I firstly decided to use `Django` for the project. However, I realized that `Django` is a bit overkill for this project. After that, I implemented a backend design with `Golang` (since I am familiar with it for a backend design) and `Echo` framework where I very lately recognize that `Render` does not support `Echo` framework. Since then, I ,again, wanted to use a programming language beyond what I know for the project development. Thus, I decided to use `Flask` framework with `Python` since they are easy to learn and implement for simple projects.
