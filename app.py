@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, url_for, redirect, session, flash
+from flask import Flask, request, jsonify, render_template, url_for, redirect, session
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask_cors import CORS, cross_origin
@@ -57,7 +57,6 @@ def add_item(category):
     image = request.form.get('image')
     seller = request.form.get('seller')
     if seller not in [user['username'] for user in users_collection.find({})]:
-        flash('Seller does not exist')
         message = 'Seller user does not exist'
         return render_template('page/product/product_form.html', category=category, message=message)
     if category == 'Clothing':
@@ -87,7 +86,6 @@ def category_choice():
 def item_form():
     current_user = users_collection.find_one({'username': session['username']})
     if current_user['role'] != 'admin':
-        flash('You are not authorized to access this page')
         return redirect(url_for('products'))
     category = request.form.get('category')
     return render_template('page/product/product_form.html', category=category, role=current_user['role'])
@@ -132,7 +130,6 @@ def update_item(item_id):
 def delete_item(item_id):
     current_user = users_collection.find_one({'username': session['username']})
     if current_user['role'] != 'admin':
-        flash('You are not authorized to access this page')
         return redirect(url_for('products'))
     item = items_collection.find_one({'_id': ObjectId(item_id)})
     seller_id = item['seller_id']
@@ -340,7 +337,6 @@ class User:
 def add_user():
     current_user = users_collection.find_one({'username': session['username']})
     if current_user['role'] != 'admin':
-        flash('You are not authorized to access this page')
         return redirect(url_for('products'))
 
     username = request.json.get('username')
@@ -367,7 +363,6 @@ def add_user():
 def update_user(user_id):
     current_user = users_collection.find_one({'username': session['username']})
     if current_user['role'] != 'admin':
-        flash('You are not authorized to access this page')
         return redirect(url_for('products'))
 
     username = request.json.get('username')
@@ -506,7 +501,6 @@ def get_users():
 def delete_user(user_id):
     current_user = users_collection.find_one({'username': session['username']})
     if current_user['role'] != 'admin':
-        flash('You are not authorized to access this page')
         return redirect(url_for('products'))
 
     user = users_collection.find_one({'_id': ObjectId(user_id)})
@@ -594,7 +588,7 @@ def user_add():
         confirm_password = request.form.get('confirm_password')
         role = request.form.get('role')
         if password != confirm_password:
-            flash('Passwords do not match')
+
             return redirect(url_for('user_add_form'))
         password = ws.generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
         User(username, email, password, role).save()
@@ -702,20 +696,20 @@ def register():
         email_found = users_collection.find_one({"email": email})
         if user_found:
             message = 'There already is a user by that username'
-            flash(message)
+
             return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         if email_found:
             message = 'This email already exists in database'
-            flash(message)
+
             return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         if password1 != password2:
             message = 'Passwords should match!'
-            flash(message)
+
             return render_template('page/admin/user_add_form.html', message=message, role=current_user['role'])
         else:
             hashed = ws.generate_password_hash(password2, method='pbkdf2:sha256', salt_length=8)
             User(username, email, hashed, role).save()
-            flash("User has been registered successfully")
+
             return redirect(url_for('registered'))
     else:
         return render_template('page/register.html', role=current_user['role'])
@@ -726,7 +720,6 @@ def register():
 def registered():
     if "username" in session:
         session.pop("username")
-        flash("You have been logged out")
         return render_template('page/registered.html')
     else:
         return redirect(url_for("login"))
@@ -756,11 +749,11 @@ def login():
                     message = 'You are already logged in'
                     return redirect(url_for("products", message=message))
                 message = 'Wrong password'
-                flash(message)
+
                 return redirect(url_for("products", message=message))
         else:
             message = 'Username not found'
-            flash(message)
+
             return render_template('page/login.html', message=message)
     return render_template('page/login.html')
 
@@ -781,7 +774,6 @@ def logged_in():
 def logout():
     if "username" in session:
         session.pop("username")
-        flash("You have been logged out")
         return render_template("page/logout.html")
     else:
         return redirect(url_for("login"))
