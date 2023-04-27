@@ -43,8 +43,6 @@ This is a simple e-commerce web application.
 
 | Username     | Password | Role |
 |--------------|----------| --- |
-| tayyipozturk | ceng495  | admin |
-| adminTester  | tester   | admin |
 | userTester   | tester   | user |
 | Alice        | 12345    | user |
 | Bob          | 12345    | user |
